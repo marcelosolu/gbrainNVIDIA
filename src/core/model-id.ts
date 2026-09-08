@@ -102,3 +102,21 @@ export function normalizeModelId(input: string, defaultProvider = 'anthropic'): 
 export function isStrictOpenRouterFreeModelId(input: string): boolean {
   return /^openrouter:[a-z0-9][a-z0-9._-]{0,63}\/[a-z0-9][a-z0-9._-]{0,127}:free$/i.test(input);
 }
+
+/**
+ * Serialize a provider + model id to canonical `provider:model` config form.
+ *
+ * Recipes store catalog-form model ids (`nvidia/nv-embed-v1`), so naive
+ * `${providerId}:${modelId}` concatenation produces the doubled
+ * `nvidia:nvidia/nv-embed-v1`. The doubled form parses (colon-first) but
+ * breaks exact-match comparisons against canonical defaults and looks
+ * malformed in user-facing config. Strip the redundant provider prefix.
+ *
+ *   serializeModelId('nvidia', 'nvidia/nv-embed-v1') → 'nvidia:nv-embed-v1'
+ *   serializeModelId('voyage', 'voyage-4')           → 'voyage:voyage-4'
+ */
+export function serializeModelId(providerId: string, modelId: string): string {
+  const prefix = `${providerId}/`;
+  const suffix = modelId.startsWith(prefix) ? modelId.slice(prefix.length) : modelId;
+  return `${providerId}:${suffix}`;
+}

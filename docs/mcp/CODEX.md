@@ -15,12 +15,12 @@ gbrain ships as a native Codex plugin — MCP server + a curated brain-first
 skill set in two commands:
 
 ```bash
-codex plugin marketplace add garrytan/gbrain@codex-plugin   # slim dist branch
+codex plugin marketplace add marcelosolu/gbrainNVIDIA@codex-plugin   # slim dist branch
 codex plugin add gbrain@gbrain
 ```
 
 The `@codex-plugin` ref is the release-published plugin dist (force-advanced
-each release, like `latest-stable`). The bare `garrytan/gbrain` form also
+each release, like `latest-stable`). The bare `marcelosolu/gbrainNVIDIA` form also
 works but downloads the full development repo and tracks master tip — use it
 only for from-source installs. Refresh a snapshot with
 `codex plugin marketplace upgrade`; remove with `codex plugin remove
@@ -34,7 +34,7 @@ branch carries the variant trees already, so enabling is a two-line
 marketplace edit once verified — TODOS.md follow-up).
 
 **Prerequisites.** The plugin cannot ship the gbrain binary; install it once
-(`bun install -g github:garrytan/gbrain#latest-stable` — the npm package
+(`bun install -g github:marcelosolu/gbrainNVIDIA#latest-stable` — the npm package
 named `gbrain` is unrelated, never `npm install -g gbrain`) and create a
 brain (`gbrain init` — zero-config local PGLite by default). The bundled
 `setup` skill walks both. With no binary, the plugin's MCP server exits with
@@ -80,7 +80,7 @@ signal — if its server isn't working, fix the binary, or remove the plugin.
 
 **Upgrading** has two halves: `codex plugin marketplace upgrade` refreshes
 the plugin snapshot (skills + manifests); the `gbrain-upgrade` skill or a
-`bun install -g github:garrytan/gbrain#latest-stable` re-run refreshes the
+`bun install -g github:marcelosolu/gbrainNVIDIA#latest-stable` re-run refreshes the
 binary the launcher resolves.
 
 ## Connect without the plugin

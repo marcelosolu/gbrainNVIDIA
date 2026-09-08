@@ -273,7 +273,7 @@ describe('chat touchpoint — gateway config plumbing', () => {
       };
     });
     configureGateway({
-      chat_model: 'nvidia:nvidia/nemotron-3-super-120b-a12b',
+      chat_model: 'nvidia:nemotron-3-super-120b-a12b',
       chat_fallback_chain: ['openrouter:nvidia/nemotron-3-ultra-550b-a55b:free'],
       env: {},
     });
@@ -281,7 +281,7 @@ describe('chat touchpoint — gateway config plumbing', () => {
     const result = await chat({ messages: [{ role: 'user', content: 'hello' }] });
     expect(result.text).toBe('fallback-ok');
     expect(attempts).toEqual([
-      'nvidia:nvidia/nemotron-3-super-120b-a12b',
+      'nvidia:nemotron-3-super-120b-a12b',
       'openrouter:nvidia/nemotron-3-ultra-550b-a55b:free',
     ]);
   });
@@ -293,7 +293,7 @@ describe('chat touchpoint — gateway config plumbing', () => {
       throw new AITransientError('HTTP 503 unavailable');
     });
     configureGateway({
-      chat_model: 'nvidia:nvidia/nemotron-3-super-120b-a12b',
+      chat_model: 'nvidia:nemotron-3-super-120b-a12b',
       chat_fallback_chain: [
         'openrouter:nvidia/nemotron-3-ultra-550b-a55b:free',
         'openrouter:openai/gpt-oss-120b:free',
@@ -316,7 +316,7 @@ describe('chat touchpoint — gateway config plumbing', () => {
       throw new AITransientError('timeout');
     });
     configureGateway({
-      chat_model: 'nvidia:nvidia/nemotron-3-super-120b-a12b',
+      chat_model: 'nvidia:nemotron-3-super-120b-a12b',
       chat_fallback_chain: ['openrouter:nvidia/nemotron-3-ultra-550b-a55b:free'],
       env: {},
     });
@@ -325,7 +325,7 @@ describe('chat touchpoint — gateway config plumbing', () => {
       abortSignal: controller.signal,
       messages: [{ role: 'user', content: 'hello' }],
     })).rejects.toThrow('timeout');
-    expect(attempts).toEqual(['nvidia:nvidia/nemotron-3-super-120b-a12b']);
+    expect(attempts).toEqual(['nvidia:nemotron-3-super-120b-a12b']);
   });
   test('sanitizes quoted Bearer, assignment, JSON, and connection secrets after failover', async () => {
     let attempt = 0;
@@ -335,7 +335,7 @@ describe('chat touchpoint — gateway config plumbing', () => {
       throw new Error('HTTP 503 Bearer "fake secret value" Bearer fake secret value; tail PASSWORD="abc,def" PASSWORD="abc"TAIL; normal {"clientSecret":"JSON-secret"} postgres://user:***@host/db');
     });
     configureGateway({
-      chat_model: 'nvidia:nvidia/nemotron-3-super-120b-a12b',
+      chat_model: 'nvidia:nemotron-3-super-120b-a12b',
       chat_fallback_chain: ['openrouter:nvidia/nemotron-3-ultra-550b-a55b:free'],
       env: {},
     });
@@ -364,7 +364,7 @@ describe('chat touchpoint — gateway config plumbing', () => {
       throw new Error(String.raw`HTTP 503 {\\u0022clientSecret\\u003a\\u0022UNICODE-LEAK\\u0022}`);
     });
     configureGateway({
-      chat_model: 'nvidia:nvidia/nemotron-3-super-120b-a12b',
+      chat_model: 'nvidia:nemotron-3-super-120b-a12b',
       chat_fallback_chain: ['openrouter:nvidia/nemotron-3-ultra-550b-a55b:free'],
       env: {},
     });
@@ -385,13 +385,13 @@ describe('chat touchpoint — gateway config plumbing', () => {
       throw new Error('bad request');
     });
     configureGateway({
-      chat_model: 'nvidia:nvidia/nemotron-3-super-120b-a12b',
+      chat_model: 'nvidia:nemotron-3-super-120b-a12b',
       chat_fallback_chain: ['openrouter:nvidia/nemotron-3-ultra-550b-a55b:free'],
       env: {},
     });
 
     await expect(chat({ messages: [{ role: 'user', content: 'hello' }] })).rejects.toThrow('bad request');
-    expect(attempts).toEqual(['nvidia:nvidia/nemotron-3-super-120b-a12b']);
+    expect(attempts).toEqual(['nvidia:nemotron-3-super-120b-a12b']);
   });
 
   test('does not fail over configuration errors', async () => {
@@ -401,13 +401,13 @@ describe('chat touchpoint — gateway config plumbing', () => {
       throw new AIConfigError('invalid model');
     });
     configureGateway({
-      chat_model: 'nvidia:nvidia/nemotron-3-super-120b-a12b',
+      chat_model: 'nvidia:nemotron-3-super-120b-a12b',
       chat_fallback_chain: ['openrouter:nvidia/nemotron-3-ultra-550b-a55b:free'],
       env: {},
     });
 
     await expect(chat({ messages: [{ role: 'user', content: 'hello' }] })).rejects.toThrow('invalid model');
-    expect(attempts).toEqual(['nvidia:nvidia/nemotron-3-super-120b-a12b']);
+    expect(attempts).toEqual(['nvidia:nemotron-3-super-120b-a12b']);
   });
 
   test('isAvailable("chat") returns true when default Anthropic + key present', () => {

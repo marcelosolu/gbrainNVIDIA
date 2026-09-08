@@ -78,7 +78,7 @@ describe('extract_atoms configurable caps (#4540)', () => {
   });
 
   test('NVIDIA extraction disables reasoning per call without changing the selected model', async () => {
-    await engine.setConfig('models.dream.extract_atoms', 'nvidia:nvidia/nemotron-3-super-120b-a12b');
+    await engine.setConfig('models.dream.extract_atoms', 'nvidia:nemotron-3-super-120b-a12b');
     const nvidia = captureChat();
     await runPhaseExtractAtoms(engine, {
       sourceId: 'default',
@@ -87,7 +87,7 @@ describe('extract_atoms configurable caps (#4540)', () => {
       _chat: nvidia.chat,
     });
     expect(nvidia.calls).toHaveLength(1);
-    expect(nvidia.calls[0].model).toBe('nvidia:nvidia/nemotron-3-super-120b-a12b');
+    expect(nvidia.calls[0].model).toBe('nvidia:nemotron-3-super-120b-a12b');
     expect(nvidia.calls[0].providerOptions).toEqual({ nvidia: { reasoningEffort: 'none' } });
 
     await engine.setConfig('models.dream.extract_atoms', 'openai:gpt-5.4');

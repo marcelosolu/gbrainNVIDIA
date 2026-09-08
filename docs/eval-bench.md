@@ -499,7 +499,7 @@ curl -Lo ~/datasets/longmemeval/longmemeval_s_cleaned.json \
   https://huggingface.co/datasets/xiaowu0162/longmemeval-cleaned/resolve/main/longmemeval_s_cleaned.json
 
 # The embedder is not a per-run flag: it resolves from the `embedding_model`
-# config key (`<provider>:<model>`; new-install default `voyage:voyage-4`,
+# config key (`<provider>:<model>`; new-install default `nvidia:nv-embed-v1`,
 # existing brains keep their configured model) or the
 # GBRAIN_EMBEDDING_MODEL / GBRAIN_EMBEDDING_DIMENSIONS env overrides. The
 # measured result above used openai:text-embedding-3-large at 1536 dims.

@@ -48,6 +48,7 @@ import type {
   TouchpointKind,
 } from './types.ts';
 import { resolveRecipe, assertTouchpoint, parseModelId, embeddingDimsForModel } from './model-resolver.ts';
+import { serializeModelId } from '../model-id.ts';
 import { recordChatUsage } from './chat-usage.ts';
 import {
   OPENROUTER_CACHE_HEADER,
@@ -1934,7 +1935,7 @@ export async function embed(texts: string[], opts?: EmbedOpts): Promise<Float32A
     const totalChars = truncated.reduce((s, t) => s + t.length, 0);
     const estimatedInputTokens = Math.ceil(totalChars / Math.max(charsPerToken, 1));
     tracker.reserve({
-      modelId: `${recipe.id}:${modelId}`,
+      modelId: serializeModelId(recipe.id, modelId),
       estimatedInputTokens,
       maxOutputTokens: 0,
       kind: 'embed',
@@ -2015,7 +2016,7 @@ export async function embed(texts: string[], opts?: EmbedOpts): Promise<Float32A
       const inputTokens = Math.ceil(totalChars / Math.max(charsPerToken, 1));
       try {
         tracker.record({
-          modelId: `${recipe.id}:${modelId}`,
+          modelId: serializeModelId(recipe.id, modelId),
           inputTokens,
           outputTokens: 0,
           embeddingDims: expected,
@@ -2213,7 +2214,7 @@ async function embedSubBatch(
       const right = await embedSubBatch(texts.slice(mid), model, providerOpts, expectedDims, recipe, modelId, opts);
       return [...left, ...right];
     }
-    throw normalizeAIError(err, `embed(${recipe.id}:${modelId})`);
+    throw normalizeAIError(err, `embed(${serializeModelId(recipe.id, modelId)})`);
   }
 }
 
@@ -2304,8 +2305,8 @@ export async function embedMultimodal(
   // multimodal_models allow-list, enforce it pre-flight.
   if (touchpoint.multimodal_models && !touchpoint.multimodal_models.includes(parsed.modelId)) {
     throw new AIConfigError(
-      `${recipe.id}:${parsed.modelId} is not a multimodal-capable model.`,
-      `Use one of: ${touchpoint.multimodal_models.map(m => `${recipe.id}:${m}`).join(', ')}.`,
+      `${serializeModelId(recipe.id, parsed.modelId)} is not a multimodal-capable model.`,
+      `Use one of: ${touchpoint.multimodal_models.map(m => serializeModelId(recipe.id, m)).join(', ')}.`,
     );
   }
 
@@ -2388,7 +2389,7 @@ export async function embedMultimodal(
         signal: AbortSignal.timeout(AI_MULTIMODAL_TIMEOUT_MS),
       });
     } catch (err) {
-      throw normalizeAIError(err, `embedMultimodal(${recipe.id}:${parsed.modelId})`);
+      throw normalizeAIError(err, `embedMultimodal(${serializeModelId(recipe.id, parsed.modelId)})`);
     }
 
     if (!res.ok) {
@@ -2533,7 +2534,7 @@ async function embedMultimodalOpenAICompat(
         signal: AbortSignal.timeout(AI_MULTIMODAL_TIMEOUT_MS),
       });
     } catch (err) {
-      throw normalizeAIError(err, `embedMultimodal(${recipe.id}:${modelId})`);
+      throw normalizeAIError(err, `embedMultimodal(${serializeModelId(recipe.id, modelId)})`);
     }
 
     if (!res.ok) {
@@ -2582,7 +2583,7 @@ async function embedMultimodalOpenAICompat(
     // (no recipe declaration AND no config override).
     if (expectedDims > 0 && row.embedding.length !== expectedDims) {
       throw new AIConfigError(
-        `${recipe.id}:${modelId} returned ${row.embedding.length}-dim vector; expected ${expectedDims}.`,
+        `${serializeModelId(recipe.id, modelId)} returned ${row.embedding.length}-dim vector; expected ${expectedDims}.`,
         `The brain's embedding column is fixed at ${expectedDims} dims; this model is incompatible. ` +
         `Either pick a model that returns ${expectedDims} dims, OR set --embedding-dimensions ${row.embedding.length} ` +
         `and reinitialize the embedding column at the new width.`,
@@ -2895,7 +2896,7 @@ export async function expand(query: string): Promise<string[]> {
 
   try {
     const { model, recipe, modelId } = await resolveExpansionProvider(getExpansionModel());
-    const modelLabel = `${recipe.id}:${modelId}`;
+    const modelLabel = serializeModelId(recipe.id, modelId);
 
     let expansions: string[];
 

@@ -441,13 +441,20 @@ export function makeSubagentHandler(deps: SubagentDeps) {
     // cannot speak OR). Auto-enable the gateway loop for the OR families
     // that have a live abort/retry pin (anthropic/, deepseek/) so the legacy
     // pin does not refuse them when the flag is off.
-    const useGatewayLoop = isConfigTruthy(useGatewayLoopRaw) || isOpenRouterSubagentFamily(model);
+    // NVIDIA-only fork (2026-09-08): the nvidia recipe declares
+    // supports_subagent_loop: true, and the fork's default subagent tier IS
+    // nvidia: — without auto-enable every fresh install would refuse subagent
+    // jobs until the operator sets the flag by hand.
+    const { provider: subagentProvider } = splitProviderModelId(model);
+    const useGatewayLoop =
+      isConfigTruthy(useGatewayLoopRaw) ||
+      isOpenRouterSubagentFamily(model) ||
+      subagentProvider?.trim().toLowerCase() === 'nvidia';
     if (!useGatewayLoop && !isAnthropicProvider(model)) {
       throw new Error(
         `subagent job: resolved model "${model}" is non-Anthropic but agent.use_gateway_loop is not enabled. ` +
         `Enable the gateway-native loop to run on this provider: ` +
-        `\`gbrain config set agent.use_gateway_loop true\`. ` +
-        `Or use an Anthropic model (e.g. anthropic:claude-sonnet-4-6).`,
+        `\`gbrain config set agent.use_gateway_loop true\`.`,
       );
     }
 

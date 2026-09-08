@@ -47,7 +47,7 @@ afterAll(() => {
   });
 });
 
-const NV_MODEL = 'nvidia:nvidia/nv-embedqa-e5-v5';
+const NV_MODEL = 'nvidia:nv-embedqa-e5-v5';
 const NV_EXPECTED = Math.floor(512 * EMBED_INPUT_SAFETY); // 307
 
 describe('resolveMaxChunkTokens (#4530)', () => {

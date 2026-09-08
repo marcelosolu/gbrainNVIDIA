@@ -15,9 +15,9 @@ protocol (install, read order, trust boundary, common tasks). Claude Code reads
 `CLAUDE.md` automatically and can skip ahead.
 
 If you fetched this file by URL without cloning yet, the companion files live at:
-- `https://raw.githubusercontent.com/garrytan/gbrain/master/AGENTS.md` — start here
-- `https://raw.githubusercontent.com/garrytan/gbrain/master/llms.txt` — full doc map
-- `https://raw.githubusercontent.com/garrytan/gbrain/master/llms-full.txt` — same map, inlined
+- `https://raw.githubusercontent.com/marcelosolu/gbrainNVIDIA/main/AGENTS.md` — start here
+- `https://raw.githubusercontent.com/marcelosolu/gbrainNVIDIA/main/llms.txt` — full doc map
+- `https://raw.githubusercontent.com/marcelosolu/gbrainNVIDIA/main/llms-full.txt` — same map, inlined
 
 ## Step 1: Install GBrain
 
@@ -25,17 +25,17 @@ If you fetched this file by URL without cloning yet, the companion files live at
 > **NEVER install from the npm registry.** GBrain is not distributed on npm; the npm
 > package named `gbrain` is an unrelated package. Do NOT run `npm install -g gbrain` or
 > `bun add -g gbrain` (note the missing `github:` prefix — that's the trap). The only
-> supported sources are `github:garrytan/gbrain` (optionally pinned as
-> `github:garrytan/gbrain#latest-stable`, the form the bootstrap flow mandates) and a
+> supported sources are `github:marcelosolu/gbrainNVIDIA` (optionally pinned as
+> `github:marcelosolu/gbrainNVIDIA#latest-stable`, the form the bootstrap flow mandates) and a
 > git clone, exactly as shown below.
 > If an unrelated npm install is already present, remove it first
 > (`npm uninstall -g gbrain` / `bun remove -g gbrain`); `gbrain doctor` also detects this.
 
 > **On Codex or Claude Code?** After the CLI install below, the plugin is the
 > fastest way to wire the MCP server + curated skills:
-> `codex plugin marketplace add garrytan/gbrain@codex-plugin` +
+> `codex plugin marketplace add marcelosolu/gbrainNVIDIA@codex-plugin` +
 > `codex plugin add gbrain@gbrain` (Claude Code: `/plugin marketplace add
-> garrytan/gbrain` + `/plugin install gbrain@gbrain`). Details:
+> marcelosolu/gbrainNVIDIA` + `/plugin install gbrain@gbrain`). Details:
 > docs/mcp/CODEX.md and docs/mcp/CLAUDE_CODE.md.
 
 Default path (Bun is required — gbrain is a Bun + TypeScript runtime):
@@ -43,7 +43,7 @@ Default path (Bun is required — gbrain is a Bun + TypeScript runtime):
 ```bash
 curl -fsSL https://bun.sh/install | bash
 export PATH="$HOME/.bun/bin:$PATH"
-bun install -g github:garrytan/gbrain
+bun install -g github:marcelosolu/gbrainNVIDIA
 ```
 
 Verify: `gbrain --version` should print a version number. If `gbrain` is not found,
@@ -56,14 +56,14 @@ restart the shell or add the PATH export to the shell profile.
 > to recover. If that doesn't work, fall back to the deterministic install path:
 >
 > ```bash
-> git clone https://github.com/garrytan/gbrain.git ~/gbrain && cd ~/gbrain
+> git clone https://github.com/marcelosolu/gbrainNVIDIA.git ~/gbrainNVIDIA && cd ~/gbrainNVIDIA
 > bun install && bun link
 > ```
 
 ## Step 2: API Keys
 
-Ask the user for these. gbrain defaults to the Voyage embedding + reranker stack
-(`voyage:voyage-4` @ 1024d + `voyage:rerank-2.5` — one key covers both); OpenAI is the
+Ask the user for these. gbrainNVIDIA defaults to NVIDIA NIM embeddings
+(`nvidia:nv-embed-v1` @ 1024d) with the Voyage reranker (`voyage:rerank-2.5`); OpenAI is the
 main alternative, chosen at init via `--embedding-model <provider:model>`. ZeroEntropy
 is deprecated (its hosted API shuts down 2026-09-04): init auto-pick and the picker
 exclude it, and every ZE embed/rerank prints a deprecation warning. **Existing brain
@@ -71,7 +71,8 @@ still on ZeroEntropy (or any need to switch embedding/reranker models later)?** 
 the playbook at `skills/migrations/v0.46.3.0.md` — one command migrates both.
 
 ```bash
-export VOYAGE_API_KEY=pa-...          # default embedding + reranker (one key covers both)
+export NVIDIA_API_KEY=nvapi-...   # embeddings (default provider)
+export VOYAGE_API_KEY=pa-...    # reranker only (voyage:rerank-2.5); optional — without it, search runs without reranking
 export OPENAI_API_KEY=sk-...          # alternative for vector search; also powers automatic fact extraction + chat models
 export ANTHROPIC_API_KEY=sk-ant-...   # automatic fact extraction + chat models; also improves search via query expansion
 ```

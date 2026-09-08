@@ -717,7 +717,7 @@ describe('embedBatchWithBackoff (D2/D4/D4a/D8)', () => {
       calls++;
       if (calls === 1) {
         // NIM-style wrap: status on cause; parseable delay keeps the test fast.
-        const err = new Error('[embed(nvidia:nvidia/nv-embed-v1)] Bad Gateway — try again in 10ms');
+        const err = new Error('[embed(nvidia:nv-embed-v1)] Bad Gateway — try again in 10ms');
         (err as any).cause = { status: 502 };
         throw err;
       }

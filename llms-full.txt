@@ -9,7 +9,7 @@ For the link-only index, see `llms.txt`. Source of truth: https://github.com/gar
 
 ## AGENTS.md
 
-Source: https://raw.githubusercontent.com/garrytan/gbrain/master/AGENTS.md
+Source: https://raw.githubusercontent.com/marcelosolu/gbrainNVIDIA/main/AGENTS.md
 
 # Agents working on GBrain
 
@@ -31,12 +31,12 @@ start here.
    ```bash
    curl -fsSL https://bun.sh/install | bash
    export PATH="$HOME/.bun/bin:$PATH"
-   bun install -g github:garrytan/gbrain
+   bun install -g github:marcelosolu/gbrainNVIDIA
    ```
    If `bun install -g` aborts or `gbrain doctor` reports `schema_version: 0`,
    the CLI prints a recovery hint pointing at [#218](https://github.com/garrytan/gbrain/issues/218).
    Run `gbrain apply-migrations --yes` to recover, or fall back to the
-   deterministic install: `git clone https://github.com/garrytan/gbrain.git ~/gbrain && cd ~/gbrain && bun install && bun link`.
+   deterministic install: `git clone https://github.com/marcelosolu/gbrainNVIDIA.git ~/gbrainNVIDIA && cd ~/gbrainNVIDIA && bun install && bun link`.
 2. Init the brain: `gbrain init` (defaults to PGLite, zero-config). For 1000+ files or
    multi-machine sync, init suggests Postgres + pgvector via Supabase.
 3. **STOP — ask the user about search mode.** `gbrain init` auto-applied a
@@ -173,7 +173,7 @@ publishing: `LLMS_REPO_BASE=https://raw.githubusercontent.com/your-org/your-fork
 
 ## CLAUDE.md
 
-Source: https://raw.githubusercontent.com/garrytan/gbrain/master/CLAUDE.md
+Source: https://raw.githubusercontent.com/marcelosolu/gbrainNVIDIA/main/CLAUDE.md
 
 # CLAUDE.md
 
@@ -1133,7 +1133,7 @@ Key routing rules:
 
 ## INSTALL_FOR_AGENTS.md
 
-Source: https://raw.githubusercontent.com/garrytan/gbrain/master/INSTALL_FOR_AGENTS.md
+Source: https://raw.githubusercontent.com/marcelosolu/gbrainNVIDIA/main/INSTALL_FOR_AGENTS.md
 
 # GBrain Installation Guide for AI Agents
 
@@ -1152,9 +1152,9 @@ protocol (install, read order, trust boundary, common tasks). Claude Code reads
 `CLAUDE.md` automatically and can skip ahead.
 
 If you fetched this file by URL without cloning yet, the companion files live at:
-- `https://raw.githubusercontent.com/garrytan/gbrain/master/AGENTS.md` — start here
-- `https://raw.githubusercontent.com/garrytan/gbrain/master/llms.txt` — full doc map
-- `https://raw.githubusercontent.com/garrytan/gbrain/master/llms-full.txt` — same map, inlined
+- `https://raw.githubusercontent.com/marcelosolu/gbrainNVIDIA/main/AGENTS.md` — start here
+- `https://raw.githubusercontent.com/marcelosolu/gbrainNVIDIA/main/llms.txt` — full doc map
+- `https://raw.githubusercontent.com/marcelosolu/gbrainNVIDIA/main/llms-full.txt` — same map, inlined
 
 ## Step 1: Install GBrain
 
@@ -1162,17 +1162,17 @@ If you fetched this file by URL without cloning yet, the companion files live at
 > **NEVER install from the npm registry.** GBrain is not distributed on npm; the npm
 > package named `gbrain` is an unrelated package. Do NOT run `npm install -g gbrain` or
 > `bun add -g gbrain` (note the missing `github:` prefix — that's the trap). The only
-> supported sources are `github:garrytan/gbrain` (optionally pinned as
-> `github:garrytan/gbrain#latest-stable`, the form the bootstrap flow mandates) and a
+> supported sources are `github:marcelosolu/gbrainNVIDIA` (optionally pinned as
+> `github:marcelosolu/gbrainNVIDIA#latest-stable`, the form the bootstrap flow mandates) and a
 > git clone, exactly as shown below.
 > If an unrelated npm install is already present, remove it first
 > (`npm uninstall -g gbrain` / `bun remove -g gbrain`); `gbrain doctor` also detects this.
 
 > **On Codex or Claude Code?** After the CLI install below, the plugin is the
 > fastest way to wire the MCP server + curated skills:
-> `codex plugin marketplace add garrytan/gbrain@codex-plugin` +
+> `codex plugin marketplace add marcelosolu/gbrainNVIDIA@codex-plugin` +
 > `codex plugin add gbrain@gbrain` (Claude Code: `/plugin marketplace add
-> garrytan/gbrain` + `/plugin install gbrain@gbrain`). Details:
+> marcelosolu/gbrainNVIDIA` + `/plugin install gbrain@gbrain`). Details:
 > docs/mcp/CODEX.md and docs/mcp/CLAUDE_CODE.md.
 
 Default path (Bun is required — gbrain is a Bun + TypeScript runtime):
@@ -1180,7 +1180,7 @@ Default path (Bun is required — gbrain is a Bun + TypeScript runtime):
 ```bash
 curl -fsSL https://bun.sh/install | bash
 export PATH="$HOME/.bun/bin:$PATH"
-bun install -g github:garrytan/gbrain
+bun install -g github:marcelosolu/gbrainNVIDIA
 ```
 
 Verify: `gbrain --version` should print a version number. If `gbrain` is not found,
@@ -1193,14 +1193,14 @@ restart the shell or add the PATH export to the shell profile.
 > to recover. If that doesn't work, fall back to the deterministic install path:
 >
 > ```bash
-> git clone https://github.com/garrytan/gbrain.git ~/gbrain && cd ~/gbrain
+> git clone https://github.com/marcelosolu/gbrainNVIDIA.git ~/gbrainNVIDIA && cd ~/gbrainNVIDIA
 > bun install && bun link
 > ```
 
 ## Step 2: API Keys
 
-Ask the user for these. gbrain defaults to the Voyage embedding + reranker stack
-(`voyage:voyage-4` @ 1024d + `voyage:rerank-2.5` — one key covers both); OpenAI is the
+Ask the user for these. gbrainNVIDIA defaults to NVIDIA NIM embeddings
+(`nvidia:nv-embed-v1` @ 1024d) with the Voyage reranker (`voyage:rerank-2.5`); OpenAI is the
 main alternative, chosen at init via `--embedding-model <provider:model>`. ZeroEntropy
 is deprecated (its hosted API shuts down 2026-09-04): init auto-pick and the picker
 exclude it, and every ZE embed/rerank prints a deprecation warning. **Existing brain
@@ -1208,7 +1208,8 @@ still on ZeroEntropy (or any need to switch embedding/reranker models later)?** 
 the playbook at `skills/migrations/v0.46.3.0.md` — one command migrates both.
 
 ```bash
-export VOYAGE_API_KEY=pa-...          # default embedding + reranker (one key covers both)
+export NVIDIA_API_KEY=nvapi-...   # embeddings (default provider)
+export VOYAGE_API_KEY=pa-...    # reranker only (voyage:rerank-2.5); optional — without it, search runs without reranking
 export OPENAI_API_KEY=sk-...          # alternative for vector search; also powers automatic fact extraction + chat models
 export ANTHROPIC_API_KEY=sk-ant-...   # automatic fact extraction + chat models; also improves search via query expansion
 ```
@@ -1655,7 +1656,7 @@ Init + upgrade banners auto-skip in non-TTY too.
 
 ## skills/RESOLVER.md
 
-Source: https://raw.githubusercontent.com/garrytan/gbrain/master/skills/RESOLVER.md
+Source: https://raw.githubusercontent.com/marcelosolu/gbrainNVIDIA/main/skills/RESOLVER.md
 
 # GBrain Skill Resolver
 
@@ -1834,22 +1835,22 @@ These apply to ALL brain-writing skills:
 
 ## README.md
 
-Source: https://raw.githubusercontent.com/garrytan/gbrain/master/README.md
+Source: https://raw.githubusercontent.com/marcelosolu/gbrainNVIDIA/main/README.md
 
-# GBrain
+# gbrainNVIDIA
 
-**Search gives you raw pages. GBrain gives you the answer.** It's the brain layer your AI agent has been missing — the only one that does synthesis, graph traversal, and gap analysis in one box. Run a full autonomous agent on top of it, or just wire it into Claude Code or Codex as a supercharged retrieval layer in one command; either way your coding agent stops being amnesiac about everything that isn't code.
+**Search gives you raw pages. gbrainNVIDIA gives you the answer.** It's the brain layer your AI agent has been missing — the only one that does synthesis, graph traversal, and gap analysis in one box. Run a full autonomous agent on top of it, or just wire it into Claude Code or Codex as a supercharged retrieval layer in one command; either way your coding agent stops being amnesiac about everything that isn't code.
 
-I'm Garry Tan, President and CEO of Y Combinator. I built GBrain to run my own AI agents. It's the production brain behind my OpenClaw and Hermes deployments: **155,795 pages, 24,589 people, 5,340 companies**, 66 cron jobs running autonomously. My agent ingests meetings, emails, tweets, voice calls, and original ideas while I sleep. It enriches every person and company it encounters. It fixes its own citations and consolidates memory overnight. I wake up smarter than when I went to bed — and so will you.
+**gbrainNVIDIA is a fork of [GBrain](https://github.com/garrytan/gbrain) (MIT, by Garry Tan), adapted to run on NVIDIA models by default.** Same brain — synthesis, knowledge graph, overnight consolidation — with embeddings and chat tuned for NVIDIA NIM out of the box: set `NVIDIA_API_KEY` (free at [build.nvidia.com](https://build.nvidia.com)) and `gbrain init` picks `nvidia:nv-embed-v1` for embeddings and NVIDIA Nemotron for chat automatically. Other providers (OpenAI, Anthropic, Voyage, …) still work if you configure their keys.
 
-**It works as a company brain too.** Each person on the team gets their own slice of the brain, scoped by login. When you query, you only see what you're allowed to see — never another person's notes, never another team's data. We fuzz-tested this across every way you can read the brain (search, list, lookup, multi-source reads) and got zero leaks. Drop GBrain in as your team's shared institutional memory — the [company-brain](https://www.ycombinator.com/rfs#company-brain) shape on YC's Request for Startups. If you're building in that space, you might as well build on this. **[Tutorial: set up GBrain as your company brain →](docs/tutorials/company-brain.md)**
+**It works as a company brain too.** Each person on the team gets their own slice of the brain, scoped by login. When you query, you only see what you're allowed to see — never another person's notes, never another team's data. Drop gbrainNVIDIA in as your team's shared institutional memory. **[Tutorial: set up a company brain →](docs/tutorials/company-brain.md)**
 
-Lots of personal-knowledge systems give you keyword matching and grep in a box. GBrain does that, and adds two things nobody else ships together:
+Lots of personal-knowledge systems give you keyword matching and grep in a box. gbrainNVIDIA does that, and adds two things nobody else ships together:
 
 - **A synthesis layer that gives you the actual answer.** Synthesized, well-cited prose across people, companies, deals, and ideas. Not "here are 10 chunks that mention your query"; an actual answer with citations and an explicit note on what the brain doesn't know yet. The gap analysis is the part that changes how you use the brain.
-- **A self-wiring knowledge graph.** Every page write extracts entity refs and creates typed edges (`attended`, `works_at`, `invested_in`, `founded`, `advises`) with zero LLM calls. Ask "who works at Acme AI?" or "what did Bob invest in this quarter?" and get answers vector search alone can't reach. Benchmarked: **P@5 49.1%, R@5 97.9%** on a 240-page Opus-generated rich-prose corpus, **+31.4 points P@5** over its graph-disabled variant and over ripgrep-BM25 + vector-only RAG by a similar margin. Full BrainBench scorecards live in the sibling [gbrain-evals](https://github.com/garrytan/gbrain-evals) repo.
+- **A self-wiring knowledge graph.** Every page write extracts entity refs and creates typed edges (`attended`, `works_at`, `invested_in`, `founded`, `advises`) with zero LLM calls. Ask "who works at Acme AI?" or "what did Bob invest in this quarter?" and get answers vector search alone can't reach.
 
-The point of building a 150K-page brain is to use it as a strategic moat. To never lose context. To query what's in your own head without re-reading it. The brain layer is what makes the moat usable. The 24/7 dream cycle is what keeps it sharp. Both run on your hardware, your DB, your keys.
+The point of building a large brain is to use it as a strategic moat. To never lose context. To query what's in your own head without re-reading it. The brain layer is what makes the moat usable. The 24/7 dream cycle is what keeps it sharp. Both run on your hardware, your DB, your keys.
 
 It's easier to ship a daemon that runs 24/7 to ingest, enrich, and consolidate than it is to keep an agent in chat working hard. GBrain is that daemon, generalized. Install in 30 minutes. Your agent does the work. As my personal agent gets smarter, so does yours.
 
@@ -1908,7 +1909,7 @@ This is the difference between a search engine and a brain. Search finds the pag
 > package with no connection to this project. Do not run `npm install -g gbrain` or
 > `bun add -g gbrain` — you'll get something else, and it can shadow the real binary on
 > your PATH. Install and upgrade ONLY via the documented paths below
-> (`bun install -g github:garrytan/gbrain`, or `git clone` + `bun install && bun link`).
+> (`bun install -g github:marcelosolu/gbrainNVIDIA`, or `git clone` + `bun install && bun link`).
 > If you already ran the npm install by mistake: `npm uninstall -g gbrain` /
 > `bun remove -g gbrain`, then reinstall from GitHub. `gbrain doctor` detects a
 > shadowing npm install and prints the fix.
@@ -1917,11 +1918,11 @@ GBrain is designed to be installed and operated by an AI agent. **New to GBrain?
 
 ### For Codex — the recommended first step
 
-Turn Codex into your persistent personal agent. (Just want the brain + skills without the full agent? `codex plugin marketplace add garrytan/gbrain@codex-plugin` then `codex plugin add gbrain@gbrain` — see [docs/mcp/CODEX.md](docs/mcp/CODEX.md). The paste block below builds the whole agent.) Works in the **ChatGPT desktop app** (open Codex on a folder) and in the **Codex CLI** (`codex` in a terminal) — same install, same result. Open Codex in a **new, empty folder** (not an existing code project) — that folder becomes your agent's own **private GitHub repo**, which bootstrap creates and privacy-verifies for you. Then paste:
+Turn Codex into your persistent personal agent. (Just want the brain + skills without the full agent? `codex plugin marketplace add marcelosolu/gbrainNVIDIA@codex-plugin` then `codex plugin add gbrain@gbrain` — see [docs/mcp/CODEX.md](docs/mcp/CODEX.md). The paste block below builds the whole agent.) Works in the **ChatGPT desktop app** (open Codex on a folder) and in the **Codex CLI** (`codex` in a terminal) — same install, same result. Open Codex in a **new, empty folder** (not an existing code project) — that folder becomes your agent's own **private GitHub repo**, which bootstrap creates and privacy-verifies for you. Then paste:
 
 ```
 Read and follow every step of:
-https://raw.githubusercontent.com/garrytan/gbrain/latest-stable/BOOTSTRAP_FOR_AGENTS.md
+https://raw.githubusercontent.com/marcelosolu/gbrainNVIDIA/latest-stable/BOOTSTRAP_FOR_AGENTS.md
 Goal: set yourself up as my persistent personal agent in this folder, with gbrain
 as your memory. Interview me before writing any identity file — never invent
 answers. Ask before anything destructive. You are not done until
@@ -1940,7 +1941,7 @@ Works in the **desktop app** and in the **CLI** (`claude` in a terminal) — ide
 
 ```
 Read and follow every step of:
-https://raw.githubusercontent.com/garrytan/gbrain/latest-stable/BOOTSTRAP_FOR_AGENTS.md
+https://raw.githubusercontent.com/marcelosolu/gbrainNVIDIA/latest-stable/BOOTSTRAP_FOR_AGENTS.md
 Goal: set yourself up as my persistent personal agent in this folder, with gbrain
 as your memory. Interview me before writing any identity file — never invent
 answers. Ask before anything destructive. You are not done until
@@ -1962,7 +1963,7 @@ Then paste this into your agent:
 
 ```
 Retrieve and follow the instructions at:
-https://raw.githubusercontent.com/garrytan/gbrain/master/INSTALL_FOR_AGENTS.md
+https://raw.githubusercontent.com/marcelosolu/gbrainNVIDIA/master/INSTALL_FOR_AGENTS.md
 ```
 
 The agent installs GBrain, creates the brain, asks for your API keys, loads the 50+ bundled skills, configures the dream cycle, and verifies the install end-to-end. ~30 minutes. You answer questions, it does the work.
@@ -1996,7 +1997,7 @@ Onboarding a whole agent harness onto a shared brain? On the brain host, `gbrain
 ### CLI standalone (no agent)
 
 ```bash
-bun install -g github:garrytan/gbrain
+bun install -g github:marcelosolu/gbrainNVIDIA
 gbrain init --pglite     # 2 seconds; no server, no Docker
 gbrain doctor            # verify health
 gbrain import ~/notes/   # index your markdown
@@ -2016,8 +2017,8 @@ Follow the [upgrade recovery guide](skills/migrations/v0.48.3.0.md) for rebuild
 commands, embedding costs, and the restrictions that remain after rebuilding.
 **Say to your agent:** *"Upgrade gbrain and check whether my search index needs rebuilding."*
 
-- **[Claude Code](docs/mcp/CLAUDE_CODE.md)** — plugin: `/plugin marketplace add garrytan/gbrain` + `/plugin install gbrain@gbrain` (MCP + skills; persona variants `gbrain-coding` / `gbrain-daily` install curated subsets — pick exactly one gbrain plugin). Marketplace-free skills: `gbrain skillpack scaffold --harness claude-code` copies a persona-curated skill set into your user-scope skills dir with a local-edit-respecting update lens. Or local one-liner: `claude mcp add gbrain -- gbrain serve` (zero server, zero tunnel). Remote with just a bearer token: `gbrain connect https://your-host/mcp --token gbrain_xxx` prints a paste-ready block (or `--install` wires it up and smoke-tests the token).
-- **[Codex](docs/mcp/CODEX.md)** — plugin (recommended): `codex plugin marketplace add garrytan/gbrain@codex-plugin` + `codex plugin add gbrain@gbrain` installs the MCP server AND the curated skill set. Or connect-only: `gbrain connect https://your-host/mcp --token gbrain_xxx --agent codex` (or `--install`); Codex reads the bearer from `$GBRAIN_REMOTE_TOKEN` at runtime, so the token never lands in Codex config.
+- **[Claude Code](docs/mcp/CLAUDE_CODE.md)** — plugin: `/plugin marketplace add marcelosolu/gbrainNVIDIA` + `/plugin install gbrain@gbrain` (MCP + skills; persona variants `gbrain-coding` / `gbrain-daily` install curated subsets — pick exactly one gbrain plugin). Marketplace-free skills: `gbrain skillpack scaffold --harness claude-code` copies a persona-curated skill set into your user-scope skills dir with a local-edit-respecting update lens. Or local one-liner: `claude mcp add gbrain -- gbrain serve` (zero server, zero tunnel). Remote with just a bearer token: `gbrain connect https://your-host/mcp --token gbrain_xxx` prints a paste-ready block (or `--install` wires it up and smoke-tests the token).
+- **[Codex](docs/mcp/CODEX.md)** — plugin (recommended): `codex plugin marketplace add marcelosolu/gbrainNVIDIA@codex-plugin` + `codex plugin add gbrain@gbrain` installs the MCP server AND the curated skill set. Or connect-only: `gbrain connect https://your-host/mcp --token gbrain_xxx --agent codex` (or `--install`); Codex reads the bearer from `$GBRAIN_REMOTE_TOKEN` at runtime, so the token never lands in Codex config.
 - **[Cursor / Windsurf / any stdio MCP client](docs/mcp/CLAUDE_CODE.md)** — same shape, add `{"command": "gbrain", "args": ["serve"]}` to your MCP config.
 - **[Hermes](docs/mcp/HERMES.md)** — `printf 'Y\n' | hermes mcp add gbrain --env GBRAIN_HOME=$HOME --connect-timeout 60 --command $(which gbrain) --args serve`. Keep `--args` last, and verify with `hermes mcp test gbrain` (the add exits 0 even on failure).
 - **[Grok Build](docs/mcp/GROK.md)** — `grok mcp add gbrain -e "GBRAIN_HOME=$HOME" -- gbrain serve --surface verbs`. The add is lazy (exit 0 without connecting) — verify with `grok mcp doctor gbrain`, which spawns the server and reports `7 tools discovered`. Verified against Grok Build v1.0.4.
@@ -2191,7 +2192,7 @@ Step-by-step walkthroughs for getting the most out of GBrain. Each one takes you
 
 More walkthroughs in progress: connecting an existing agent (Claude Code, Cursor, OpenClaw, Hermes) to a GBrain memory layer; setting up GBrain for VC dealflow with founder scorecards and meeting prep; migrating an existing Notion or Obsidian vault; indexing a codebase as a queryable code brain. Full tutorial index: [`docs/tutorials/`](docs/tutorials/).
 
-Want to see a tutorial that isn't here yet? [Open an issue](https://github.com/garrytan/gbrain/issues) describing the workflow you want documented.
+Want to see a tutorial that isn't here yet? [Open an issue](https://github.com/marcelosolu/gbrainNVIDIA/issues) describing the workflow you want documented.
 
 ## What it does (the loop)
 
@@ -2350,7 +2351,7 @@ flowchart LR
 
 **PGLite crashes at startup with `RuntimeError: Aborted()` (often right after a macOS upgrade)?** Not a macOS incompatibility — the OS-upgrade reboot killed gbrain mid-write and tore the data dir's WAL. gbrain repairs this automatically on the next command (data preserved, backup kept); if auto-repair is disabled or skipped, run `gbrain pglite-repair --dry-run` to diagnose and `gbrain pglite-repair --yes` to repair in place. Full recovery ladder (repair → rebuild → engine switch) in [`docs/ENGINES.md` — Troubleshooting: startup abort](docs/ENGINES.md#troubleshooting-startup-abort-runtimeerror-aborted) and [`docs/INSTALL.md`](docs/INSTALL.md#pglite-crashes-at-startup-runtimeerror-aborted).
 
-**`gbrain import` fails with `expected N dimensions, not M`?** Run `gbrain doctor`. It will print the exact `gbrain config set ...` or `gbrain migrate embeddings` command to repair the mismatch. You should not need to delete `~/.gbrain`. Fresh `gbrain init --pglite` auto-detects your embedding provider from API keys: set `VOYAGE_API_KEY` (or `OPENAI_API_KEY` / another provider key) in the environment — or in `~/.gbrain/config.json`, which init also reads — before running init, or pass `--embedding-model <provider>:<model>` explicitly. With multiple keys set, init fires an interactive picker (non-TTY auto-picks the Voyage default when its key is present). With no keys at all, init continues keyless (keyword-only search) with a loud notice; add a key later and re-run `gbrain init --force --embedding-model voyage:voyage-4` to enable embeddings, or pass `--no-embedding` up front to make keyless explicit. See [`docs/integrations/embedding-providers.md`](docs/integrations/embedding-providers.md) for the full provider matrix and [`docs/operations/headless-install.md`](docs/operations/headless-install.md) for Docker/CI sequencing.
+**`gbrain import` fails with `expected N dimensions, not M`?** Run `gbrain doctor`. It will print the exact `gbrain config set ...` or `gbrain migrate embeddings` command to repair the mismatch. You should not need to delete `~/.gbrain`. Fresh `gbrain init --pglite` auto-detects your embedding provider from API keys: set `NVIDIA_API_KEY` (or `OPENAI_API_KEY` / another provider key) in the environment — or in `~/.gbrain/config.json`, which init also reads — before running init, or pass `--embedding-model <provider>:<model>` explicitly. With multiple keys set, init fires an interactive picker (non-TTY auto-picks the NVIDIA default when its key is present). With no keys at all, init continues keyless (keyword-only search) with a loud notice; add a key later and re-run `gbrain init --force --embedding-model nvidia:nv-embed-v1` to enable embeddings, or pass `--no-embedding` up front to make keyless explicit. See [`docs/integrations/embedding-providers.md`](docs/integrations/embedding-providers.md) for the full provider matrix and [`docs/operations/headless-install.md`](docs/operations/headless-install.md) for Docker/CI sequencing.
 
 **`gbrain doctor` warns `default_source_local_path`?** Your `default` source has no `local_path` AND that null pointer is provably breaking write-through (the repo fallback is another source's own working tree, or file-backed default pages have no resolvable root). A null `local_path` on its own is the designed fallback topology and reports ok. The repair is a pointer update, never a file move: `gbrain sources set-path default <path>` prints the prior value before changing it and refuses a path that nests inside or swallows another source's tree (exit 6; `--force` bypasses). **Say to your agent:** *"Run a brain health check and fix what you find"* — the maintain skill runs `gbrain doctor` and applies the printed repair.
 
@@ -2509,7 +2510,7 @@ Community PR contributors are credited in `CHANGELOG.md` per release. ZeroEntrop
 
 ## docs/ENGINES.md
 
-Source: https://raw.githubusercontent.com/garrytan/gbrain/master/docs/ENGINES.md
+Source: https://raw.githubusercontent.com/marcelosolu/gbrainNVIDIA/main/docs/ENGINES.md
 
 # Pluggable Engine Architecture
 
@@ -3026,7 +3027,7 @@ Note: there is no SQLite engine. PGLite uses the same SQL as Postgres, so no sep
 
 ## docs/what-schemas-unlock.md
 
-Source: https://raw.githubusercontent.com/garrytan/gbrain/master/docs/what-schemas-unlock.md
+Source: https://raw.githubusercontent.com/marcelosolu/gbrainNVIDIA/main/docs/what-schemas-unlock.md
 
 # What schemas unlock
 
@@ -3206,7 +3207,7 @@ That's what we built. Try it on a corpus you actually have and the numbers go up
 
 ## docs/schema-author-tutorial.md
 
-Source: https://raw.githubusercontent.com/garrytan/gbrain/master/docs/schema-author-tutorial.md
+Source: https://raw.githubusercontent.com/marcelosolu/gbrainNVIDIA/main/docs/schema-author-tutorial.md
 
 # Tutorial: Build your first schema pack
 
@@ -3435,7 +3436,7 @@ gbrain schema lint --with-db
 
 ## docs/guides/live-sync.md
 
-Source: https://raw.githubusercontent.com/garrytan/gbrain/master/docs/guides/live-sync.md
+Source: https://raw.githubusercontent.com/marcelosolu/gbrainNVIDIA/main/docs/guides/live-sync.md
 
 # Live Sync: Keep the Index Current
 
@@ -3676,7 +3677,7 @@ vars — incident-time escape hatches, not everyday knobs.
 
 ## docs/guides/cron-schedule.md
 
-Source: https://raw.githubusercontent.com/garrytan/gbrain/master/docs/guides/cron-schedule.md
+Source: https://raw.githubusercontent.com/marcelosolu/gbrainNVIDIA/main/docs/guides/cron-schedule.md
 
 # Reference Cron Schedule
 
@@ -4034,7 +4035,7 @@ echo "Dream cycle complete at $(date)"
 
 ## docs/guides/quiet-hours.md
 
-Source: https://raw.githubusercontent.com/garrytan/gbrain/master/docs/guides/quiet-hours.md
+Source: https://raw.githubusercontent.com/marcelosolu/gbrainNVIDIA/main/docs/guides/quiet-hours.md
 
 # Quiet Hours and Timezone-Aware Delivery
 
@@ -4237,7 +4238,7 @@ Set `enabled: false` to disable quiet hours entirely (e.g., for 24/7 monitoring)
 
 ## docs/guides/scaling-skills.md
 
-Source: https://raw.githubusercontent.com/garrytan/gbrain/master/docs/guides/scaling-skills.md
+Source: https://raw.githubusercontent.com/marcelosolu/gbrainNVIDIA/main/docs/guides/scaling-skills.md
 
 # Scaling skills past 300 without drowning the context window
 
@@ -4580,7 +4581,7 @@ the bundled resolver lives at [`skills/RESOLVER.md`](../../skills/RESOLVER.md).
 
 ## docs/guides/push-context.md
 
-Source: https://raw.githubusercontent.com/garrytan/gbrain/master/docs/guides/push-context.md
+Source: https://raw.githubusercontent.com/marcelosolu/gbrainNVIDIA/main/docs/guides/push-context.md
 
 # Push-based context
 
@@ -4735,7 +4736,7 @@ never reach a prompt regardless of caller trust.
 
 ## docs/guides/github-source.md
 
-Source: https://raw.githubusercontent.com/garrytan/gbrain/master/docs/guides/github-source.md
+Source: https://raw.githubusercontent.com/marcelosolu/gbrainNVIDIA/main/docs/guides/github-source.md
 
 # GitHub source kind: issues and PRs live in the brain
 
@@ -4901,7 +4902,7 @@ gbrain sources remove gh --confirm-destructive
 
 ## docs/mcp/DEPLOY.md
 
-Source: https://raw.githubusercontent.com/garrytan/gbrain/master/docs/mcp/DEPLOY.md
+Source: https://raw.githubusercontent.com/marcelosolu/gbrainNVIDIA/main/docs/mcp/DEPLOY.md
 
 # Deploy GBrain Remote MCP Server
 
@@ -5326,7 +5327,7 @@ built-in server is the recommended path.
 
 ## docs/protocol/MEMORY_VERBS_v1.md
 
-Source: https://raw.githubusercontent.com/garrytan/gbrain/master/docs/protocol/MEMORY_VERBS_v1.md
+Source: https://raw.githubusercontent.com/marcelosolu/gbrainNVIDIA/main/docs/protocol/MEMORY_VERBS_v1.md
 
 # MEMORY_VERBS v1 — the memory wire protocol
 
@@ -5755,7 +5756,7 @@ dominates (~minutes); the measured calls report p50/p99 + the ratio guard.
 
 ## docs/GBRAIN_VERIFY.md
 
-Source: https://raw.githubusercontent.com/garrytan/gbrain/master/docs/GBRAIN_VERIFY.md
+Source: https://raw.githubusercontent.com/marcelosolu/gbrainNVIDIA/main/docs/GBRAIN_VERIFY.md
 
 # GBrain Installation Verification Runbook
 
@@ -6111,7 +6112,7 @@ end-to-end sync test (4c), push a real change and verify it appears in search.
 
 ## docs/guides/minions-fix.md
 
-Source: https://raw.githubusercontent.com/garrytan/gbrain/master/docs/guides/minions-fix.md
+Source: https://raw.githubusercontent.com/marcelosolu/gbrainNVIDIA/main/docs/guides/minions-fix.md
 
 # Minions fix: repairing a half-migrated install
 
@@ -6243,7 +6244,7 @@ Each phase is idempotent. Re-running is safe. Common failure modes:
 
 ## docs/integrations/reliability-repair.md
 
-Source: https://raw.githubusercontent.com/garrytan/gbrain/master/docs/integrations/reliability-repair.md
+Source: https://raw.githubusercontent.com/marcelosolu/gbrainNVIDIA/main/docs/integrations/reliability-repair.md
 
 # Reliability repair
 

@@ -1,4 +1,5 @@
 import { isZeroEntropyModel } from '../core/ai/defaults.ts';
+import { serializeModelId } from '../core/model-id.ts';
 import { execSync } from 'child_process';
 import { readdirSync, lstatSync, existsSync, copyFileSync, mkdirSync, readFileSync } from 'fs';
 import { join, dirname } from 'path';
@@ -395,7 +396,11 @@ async function resolveAIOptions(opts: ResolveAIOptionsArgs): Promise<ResolvedAIO
       console.error(`Provider ${shorthand} has no embedding models listed. Use --embedding-model provider:model.`);
       process.exit(1);
     }
-    out.embedding_model = `${shorthand}:${canonicalModel}`;
+    // Fork 2026-09-08: serializeModelId strips a redundant provider prefix —
+    // recipes store catalog form (`nvidia/nv-embed-v1`), so naive
+    // `${shorthand}:${canonicalModel}` would write the doubled
+    // `nvidia:nvidia/nv-embed-v1` into fresh configs.
+    out.embedding_model = serializeModelId(shorthand, canonicalModel);
     // v0.46.3: explicit flag wins over a seeded deferred-setup sentinel (see the
     // verbose branch above).
     delete out.noEmbedding;
@@ -711,7 +716,7 @@ async function resolveEmbeddingByEnv(out: ResolvedAIOptions, nonInteractive: boo
       // quality-sorted, not recommendation-sorted (Voyage lists voyage-4-large
       // first; the canonical pick is voyage-4).
       const model = tp.default_model ?? tp.models[0];
-      const fullModel = `${r.id}:${model}`;
+      const fullModel = serializeModelId(r.id, model);
       // When the resolved provider matches the NEW-INSTALL canonical default
       // model, use NEW_INSTALL_DEFAULT_EMBEDDING_DIMENSIONS instead of the
       // recipe's `default_dims` so fresh-install schema width stays aligned
@@ -774,15 +779,15 @@ async function resolveEmbeddingByEnv(out: ResolvedAIOptions, nonInteractive: boo
         console.error(
           `NOTE: ${r.auth_env?.required?.[0] ?? r.id} is set, but ${r.name} shuts down on ` +
           `${r.sunset!.date} — not auto-selecting it for a new brain. ` +
-          `Set VOYAGE_API_KEY (recommended) or force it explicitly: ` +
-          `gbrain init --pglite --embedding-model ${r.id}:${r.touchpoints.embedding!.default_model ?? r.touchpoints.embedding!.models[0]} (not recommended).`,
+          `Set NVIDIA_API_KEY (recommended) or force it explicitly: ` +
+          `gbrain init --pglite --embedding-model ${serializeModelId(r.id, r.touchpoints.embedding!.default_model ?? r.touchpoints.embedding!.models[0])} (not recommended).`,
         );
       }
       if (existingConfiglessBrain) {
         const r = sunsetReady[0];
         const tp = r.touchpoints.embedding!;
         const model = tp.default_model ?? tp.models[0];
-        const fullModel = `${r.id}:${model}`;
+        const fullModel = serializeModelId(r.id, model);
         const { DEFAULT_EMBEDDING_MODEL, DEFAULT_EMBEDDING_DIMENSIONS,
           NEW_INSTALL_DEFAULT_EMBEDDING_MODEL, renderCanonicalMigrationCommands } =
           await import('../core/ai/defaults.ts');
@@ -874,7 +879,7 @@ async function resolveExpansionByEnv(out: ResolvedAIOptions): Promise<void> {
     const r = ready[0].recipe;
     const tp = r.touchpoints.expansion!;
     if (Array.isArray(tp.models) && tp.models.length > 0) {
-      out.expansion_model = `${r.id}:${tp.models[0]}`;
+      out.expansion_model = serializeModelId(r.id, tp.models[0]);
       console.error(`Detected ${r.auth_env?.required?.[0] ?? r.id} env var. Using ${out.expansion_model} for expansion.`);
     }
   }
@@ -899,7 +904,7 @@ export async function resolveChatByEnv(out: ResolvedAIOptions): Promise<void> {
       // (discovered-latest for OpenAI, recipe entry otherwise).
       const { resolveTierDefault } = await import('../core/model-config.ts');
       const effective = resolveTierDefault('reasoning');
-      const shown = effective.startsWith(`${r.id}:`) ? effective : `${r.id}:${tp.models[0]}`;
+      const shown = effective.startsWith(`${r.id}:`) ? effective : serializeModelId(r.id, tp.models[0]);
       console.error(
         `Detected ${r.auth_env?.required?.[0] ?? r.id} env var. Chat + fact extraction will use ` +
         `${shown} (key-aware default; nothing written to config).`,

@@ -17,18 +17,18 @@
 > endpoint, so **existing vectors become unqueryable**, not just new
 > content. Two fixes, either works:
 >
-> 1. **Migrate to Voyage (recommended)** — `gbrain migrate embeddings
->    --to voyage:voyage-4 --dim 1024 --dry-run` (cost preview), then
->    `--yes`. 1280 is not a valid Voyage width (valid: 256/512/1024/2048),
+> 1. **Migrate to NVIDIA (recommended)** — `gbrain migrate embeddings
+>    --to nvidia:nv-embed-v1 --dim 1024 --dry-run` (cost preview), then
+>    `--yes`. 1280 is not a valid NVIDIA width (valid: 1024/2048/4096),
 >    so a 1280d brain gets a one-time schema/HNSW rebuild to 1024 — the
 >    command handles it, resumable if killed. The OpenAI alternative keeps
 >    the width (flexible dims): `--to openai:text-embedding-3-small --dim
->    1280`. Reranker: `gbrain config set search.reranker.model
->    voyage:rerank-2.5` (needs `VOYAGE_API_KEY`) or `gbrain config set
->    search.reranker.enabled false`. See
+>    1280`. Reranker: NVIDIA NIM exposes no rerank API — the reranker
+>    default is `voyage:rerank-2.5` (needs `VOYAGE_API_KEY`) or
+>    `gbrain config set search.reranker.enabled false`. See
 >    [the migration guide](../guides/embedding-migration.md); `gbrain
 >    doctor` (check `provider_sunset`) prints both commands target-aware
->    (Voyage at 1024; OpenAI keep-width when your brain's actual width is
+>    (NVIDIA at 1024; OpenAI keep-width when your brain's actual width is
 >    valid there).
 > 2. **Self-host the same model (zero re-embed, advanced)** — zembed-1
 >    weights are Apache-2.0. Keep the `zeroentropyai:zembed-1` model id
@@ -60,7 +60,7 @@ OpenAI and Voyage.
 
 ## Setup (existing brains and self-hosters only — do not onboard)
 
-New installs use Voyage (`gbrain init` handles it); do not create a new
+New installs use NVIDIA (`gbrain init` handles it); do not create a new
 ZeroEntropy account for a provider that shuts down on 2026-09-04. A brain
 that already has a key exports it for the remaining hosted window:
 
@@ -76,8 +76,8 @@ playbook at `skills/migrations/v0.46.3.0.md`; the one command
 (embeddings + reranker in the same consented run):
 
 ```bash
-gbrain migrate embeddings --to voyage:voyage-4 --dim 1024 --dry-run   # cost preview
-gbrain migrate embeddings --to voyage:voyage-4 --dim 1024 --yes
+gbrain migrate embeddings --to nvidia:nv-embed-v1 --dim 1024 --dry-run   # cost preview
+gbrain migrate embeddings --to nvidia:nv-embed-v1 --dim 1024 --yes
 ```
 
 Plane note (the reason NOT to hand-edit config for this):

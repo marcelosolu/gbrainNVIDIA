@@ -43,6 +43,12 @@ beforeEach(async () => {
   await engine.executeRaw('DELETE FROM subagent_messages');
   await engine.executeRaw('DELETE FROM subagent_rate_leases');
   await engine.executeRaw('DELETE FROM minion_jobs');
+  // NVIDIA-only fork (2026-09-08): the default subagent tier is nvidia:, which
+  // routes through the gateway-native loop. These tests script an Anthropic
+  // Messages client, so they pin the legacy path explicitly (tests that need
+  // another model override this inside the test). The gateway path is covered
+  // by test/e2e/subagent-gateway-path.test.ts.
+  await engine.setConfig('models.subagent', 'anthropic:claude-sonnet-4-6');
 });
 
 // ── FakeMessagesClient ──────────────────────────────────────
@@ -716,9 +722,10 @@ describe('handler-entry capability gate on the config-resolved model', () => {
     // data.model resolves `models.subagent` inside the handler — pre-fix that
     // path bypassed the capability check entirely and a tool-incapable model
     // (declared supports_tools: false) ran the loop anyway. Fixture is the
-    // nvidia recipe: it still declares supports_tools: false (minimax flipped
-    // to true in #4782, so it no longer exercises the no_tools path).
-    await engine.setConfig('models.subagent', 'nvidia:nvidia/nemotron-3-super-120b-a12b');
+    // ollama recipe: it still declares supports_tools: false (nvidia flipped
+    // to true in the 2026-09-08 NVIDIA-only fork, so it no longer exercises
+    // the no_tools path).
+    await engine.setConfig('models.subagent', 'ollama:qwen2.5-coder:14b');
     try {
       const client = new FakeMessagesClient([
         { content: [{ type: 'text', text: 'should never run' }] as any, stop_reason: 'end_turn' },
@@ -742,7 +749,7 @@ describe('handler-entry capability gate on the config-resolved model', () => {
     // non-Anthropic models regardless). The gateway path's terminal
     // early-return runs before any provider client is constructed, so no
     // API key is needed.
-    await engine.setConfig('models.subagent', 'nvidia:nvidia/nemotron-3-super-120b-a12b');
+    await engine.setConfig('models.subagent', 'nvidia:nemotron-3-super-120b-a12b');
     await engine.setConfig('agent.use_gateway_loop', 'true');
     try {
       const client = new FakeMessagesClient([]);
@@ -778,7 +785,9 @@ describe('handler-entry capability gate on the config-resolved model', () => {
     // A gateway transcript persists pending dispatch as `tool-call` blocks.
     // A replay that still needs the loop to resume on the provider must NOT
     // slip past the capability gate via the terminal exception.
-    await engine.setConfig('models.subagent', 'nvidia:nvidia/nemotron-3-super-120b-a12b');
+    // Fixture: ollama declares supports_tools: false (nvidia flipped to true
+    // in the 2026-09-08 NVIDIA-only fork).
+    await engine.setConfig('models.subagent', 'ollama:qwen2.5-coder:14b');
     await engine.setConfig('agent.use_gateway_loop', 'true');
     try {
       const client = new FakeMessagesClient([]);

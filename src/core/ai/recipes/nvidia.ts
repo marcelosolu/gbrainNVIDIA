@@ -28,6 +28,9 @@ export const nvidia: Recipe = {
     'llama-nemotron-embed-1b-v2': 'nvidia/llama-nemotron-embed-1b-v2',
     'nemotron-3-super': 'nvidia/nemotron-3-super-120b-a12b',
     'nemotron-3-super-120b-a12b': 'nvidia/nemotron-3-super-120b-a12b',
+    // Full catalog id usable as a bare suffix: `nvidia:nemotron-3-ultra-550b-a55b`
+    // (single prefix) must resolve — TIER_DEFAULTS.deep points at it.
+    'nemotron-3-ultra-550b-a55b': 'nvidia/nemotron-3-ultra-550b-a55b',
     'nv-embed-v1': 'nvidia/nv-embed-v1',
     'nv-embedcode-7b-v1': 'nvidia/nv-embedcode-7b-v1',
   },
@@ -56,6 +59,11 @@ export const nvidia: Recipe = {
         'nvidia/nv-embed-v1',
         'nvidia/nv-embedcode-7b-v1',
       ],
+      // Canonical default: nv-embed-v1 is the general-purpose embedding model
+      // (the QA/e5 model has a 512-token input cap and code model is niche).
+      // init's `--embedding-model nvidia` shorthand resolves here, not to
+      // models[0].
+      default_model: 'nvidia/nv-embed-v1',
       // Default to the lightest tested hosted model. Larger NVIDIA models are
       // supported via explicit embedding_dimensions (2048 or 4096).
       default_dims: 1024,

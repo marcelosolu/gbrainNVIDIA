@@ -64,9 +64,9 @@ export interface ResolveModelOpts {
 export const DEFAULT_ALIASES: Record<string, string> = {
   // NVIDIA-only fork (2026-09-08, decisão do operador): aliases clássicos
   // apontam para modelos NVIDIA gratuitos — nunca Anthropic.
-  opus:   'nvidia:nvidia/nemotron-3-ultra-550b-a55b',
-  sonnet: 'nvidia:nvidia/nemotron-3-super-120b-a12b',
-  haiku:  'nvidia:nvidia/nemotron-3-super-120b-a12b',
+  opus:   'nvidia:nemotron-3-ultra-550b-a55b',
+  sonnet: 'nvidia:nemotron-3-super-120b-a12b',
+  haiku:  'nvidia:nemotron-3-super-120b-a12b',
   // `gemini` repointed (#2507): `gemini-3-pro` only ever existed as a preview
   // id (`gemini-3-pro-preview`) and was shut down — it was never chat-listed
   // in the google recipe nor priced. 2.5-flash is the recipe's chat models[0];
@@ -91,10 +91,10 @@ export const DEFAULT_ALIASES: Record<string, string> = {
  * Users override via `gbrain config set models.tier.<tier> <model>`.
  */
 export const TIER_DEFAULTS: Record<ModelTier, string> = {
-  utility:   'nvidia:nvidia/nemotron-3-super-120b-a12b',
-  reasoning: 'nvidia:nvidia/nemotron-3-super-120b-a12b',
-  deep:      'nvidia:nvidia/nemotron-3-ultra-550b-a55b',
-  subagent:  'nvidia:nvidia/nemotron-3-super-120b-a12b',
+  utility:   'nvidia:nemotron-3-super-120b-a12b',
+  reasoning: 'nvidia:nemotron-3-super-120b-a12b',
+  deep:      'nvidia:nemotron-3-ultra-550b-a55b',
+  subagent:  'nvidia:nemotron-3-super-120b-a12b',
 };
 
 /**

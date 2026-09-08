@@ -191,7 +191,7 @@ export async function applyDbPlaneReadSideMerge(
         try {
           const parsed = JSON.parse(rawChain);
           if (Array.isArray(parsed) && parsed.every((x) => typeof x === 'string')) {
-            chain = parsed.filter((s) => s.length > 0);
+            chain = parsed.map((s) => s.trim()).filter(Boolean);
           } else {
             console.warn('[gbrain] config: chat_fallback_chain DB value is not a JSON array of strings; ignoring');
           }
@@ -199,7 +199,7 @@ export async function applyDbPlaneReadSideMerge(
           console.warn(`[gbrain] config: chat_fallback_chain DB value is not valid JSON; ignoring (${(err as Error).message})`);
         }
       } else {
-        chain = rawChain.split(',').filter((s) => s.length > 0);
+        chain = rawChain.split(',').map((s) => s.trim()).filter(Boolean);
       }
       if (chain !== undefined && chain.length > 0) {
         merged.chat_fallback_chain = chain;
