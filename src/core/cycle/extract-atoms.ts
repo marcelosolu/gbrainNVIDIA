@@ -1084,6 +1084,14 @@ export async function runPhaseExtractAtoms(
     // #4529/#4540: configurable input cap, cut UTF-8-safely (a bare .slice()
     // can split a surrogate pair at the boundary).
     const promptContent = truncateUtf8(item.content, maxInputChars);
+    // Nemotron is a reasoning model. Its reasoning can consume the entire
+    // output cap before the required JSON array is emitted, yielding
+    // finishReason=length and an unparseable response. Disable reasoning only
+    // for the NVIDIA extraction route; keep every other model's behavior
+    // unchanged. This is a per-call option, not a model/provider change.
+    const extractProviderOptions = extractModel.startsWith('nvidia:')
+      ? { nvidia: { reasoningEffort: 'none' } }
+      : undefined;
     try {
       const result = await chat({
         model: extractModel,
@@ -1095,6 +1103,7 @@ export async function runPhaseExtractAtoms(
           },
         ],
         maxTokens: maxOutputTokens,
+        ...(extractProviderOptions ? { providerOptions: extractProviderOptions } : {}),
       });
       // Post-await yield: closes the "long LLM call past TTL" hazard
       // codex flagged. The 30s throttle inside maybeYield bounds the

@@ -71,6 +71,11 @@ export const HANDLER_DEFAULT_TIMEOUT_MS: Readonly<Record<string, number>> = {
   // null-default and got dead-lettered mid-generation on slow chat providers
   // (facts silently lost) — exactly the failure this file exists to prevent.
   'facts-absorb': TEN_MIN_MS,
+  // Conversation-facts backfill performs multiple LLM calls per page and
+  // must not inherit the short null-default wall-clock when submitted without
+  // an explicit timeout (the 2026-08-23 timeout incident). Keep this bounded
+  // at the same 10-minute budget as the per-page facts extractor.
+  'extract-conversation-facts': TEN_MIN_MS,
   // Per-page contextual reindex jobs process chunks sequentially with one
   // rate-leased LLM synopsis call per chunk; large transcript pages need more
   // than the standard 30-min long-job budget.

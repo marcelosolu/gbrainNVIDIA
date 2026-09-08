@@ -188,6 +188,14 @@ export const CANONICAL_PRICING: Record<string, ModelPricing> = {
   'openrouter:deepseek/deepseek-v4-flash-0731': { input: 0.14,  output: 0.28 },
   'openrouter:qwen/qwen3.7-flash':              { input: 0.03,  output: 0.13 },
   'openrouter:qwen/qwen3.6-plus':               { input: 0.325, output: 1.95 },
+
+  // ── NVIDIA (fork 100% NVIDIA, 2026-09-08) ────────────────────────────
+  // Endpoint integrate.api.nvidia.com é gratuito (créditos dev) — as taxas
+  // abaixo são conservadoras de referência para o orçamento --max-usd;
+  // custo real faturado ≈ 0. Entradas exigidas pelo default-alias-liveness
+  // (DEFAULT_ALIASES / TIER_DEFAULTS apontam para estes ids).
+  'nvidia:nvidia/nemotron-3-super-120b-a12b': { input: 0.60, output: 1.80 },
+  'nvidia:nvidia/nemotron-3-ultra-550b-a55b': { input: 0.78, output: 2.34 },
 };
 
 /**

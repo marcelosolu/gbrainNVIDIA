@@ -39,13 +39,15 @@ export const nvidia: Recipe = {
     chat: {
       models: [
         'nvidia/nemotron-3-super-120b-a12b',
+        // NVIDIA-only fork (2026-09-08): ultra validado em produção
+        // (canário A/B 9/9 atoms; contexto 1M; job 22625 completed).
+        'nvidia/nemotron-3-ultra-550b-a55b',
       ],
-      supports_tools: false,
-      supports_subagent_loop: false,
-      // Do not treat Nemotron as a Minions subagent driver until tool-calling
-      // and replay stability are proven through a separate adapter test.
-      max_context_tokens: 128000,
-      price_last_verified: '2026-05-24',
+      supports_tools: true,
+      supports_subagent_loop: true,
+      // Ultra: 1M de contexto (catálogo NVIDIA 2026-09-08).
+      max_context_tokens: 1000000,
+      price_last_verified: '2026-09-08',
     },
     embedding: {
       models: [

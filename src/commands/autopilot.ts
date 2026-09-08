@@ -1214,11 +1214,15 @@ export async function runAutopilot(engine: BrainEngine, args: string[]) {
                       // idempotency key is the correct dedup. Pre-check it so we
                       // submit + count only genuinely-new sources (queue.add returns
                       // the existing row on an idempotency hit with no created flag,
-                      // which would otherwise over-count the daily cap). The
-                      // single-instance autopilot lock + the unique idempotency
+                      // which would otherwise over-count the daily cap). Dead and
+                      // cancelled rows deliberately do NOT block: queue.add frees
+                      // their idempotency slot and must be allowed to retry in the
+                      // same UTC day after a bounded failure.
+                      // The single-instance autopilot lock + unique idempotency
                       // index make this pre-check race-free.
                       const dupe = await engine.executeRaw<{ one: number }>(
-                        `SELECT 1 AS one FROM minion_jobs WHERE idempotency_key = $1 LIMIT 1`,
+                        `SELECT 1 AS one FROM minion_jobs WHERE idempotency_key = $1 ` +
+                        `AND status NOT IN ('dead', 'cancelled') LIMIT 1`,
                         [idemKey],
                       );
                       if (dupe.length > 0) continue; // already queued/drained for this source today
