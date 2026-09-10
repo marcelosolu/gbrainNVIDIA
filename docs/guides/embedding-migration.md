@@ -4,7 +4,7 @@
 embedding provider/model, safely and resumably. It is the forward path off a
 sunsetting provider (for example ZeroEntropy's hosted API, which shuts down
 2026-09-04 and remains the configless runtime fallback for existing brains
-that never picked a model — new installs default to `voyage:voyage-4`) — but
+that never picked a model — new installs default to `nvidia:nv-embed-v1`) — but
 it is provider-agnostic: any configured `provider:model` works as a target.
 
 Also reachable as `gbrain retrieval-upgrade` — the alias that `gbrain doctor`
@@ -14,13 +14,13 @@ repair hints and the README point at.
 
 ```bash
 # Preview the work + cost. Changes nothing.
-gbrain migrate embeddings --to voyage:voyage-4 --dim 1024 --dry-run
+gbrain migrate embeddings --to nvidia:nv-embed-v1 --dim 1024 --dry-run
 
 # Run it (interactive confirm shows chunk count + $ estimate first).
-gbrain migrate embeddings --to voyage:voyage-4 --dim 1024
+gbrain migrate embeddings --to nvidia:nv-embed-v1 --dim 1024
 
 # Non-interactive (cron / scripts): --yes is required, else exit 2.
-gbrain migrate embeddings --to voyage:voyage-4 --dim 1024 --yes
+gbrain migrate embeddings --to nvidia:nv-embed-v1 --dim 1024 --yes
 ```
 
 `--dim <N>` overrides the target width; it defaults to the provider recipe's
@@ -34,21 +34,21 @@ the explicit escape hatch.
 
 ## Recommended targets
 
-- **`voyage:voyage-4 --dim 1024`** (the default for new installs). One
-  `VOYAGE_API_KEY` covers embedding, the `rerank-2.5` reranker, and the
-  multimodal model; the voyage-4 family shares one embedding space, so you
-  can later point the query model at `voyage-4-large` or `voyage-4-lite`
-  without reindexing. Note: **1280 is not a valid Voyage width** (valid:
-  256/512/1024/2048), so a legacy 1280d brain gets a one-time schema/HNSW
-  index rebuild to 1024 — the command handles it, and it is resumable if
-  killed.
+- **`nvidia:nv-embed-v1 --dim 1024`** (the default for new installs). Set
+  `NVIDIA_API_KEY` (free tier at build.nvidia.com); the nv-embed family
+  shares one embedding space across its 1024/2048/4096 widths, so you can
+  later change `--dim` without switching providers. Note: **1280 is not a
+  valid NVIDIA width** (valid: 1024/2048/4096), so a legacy 1280d brain gets
+  a one-time schema/HNSW index rebuild to 1024 — the command handles it, and
+  it is resumable if killed. NVIDIA has no rerank endpoint: reranking stays
+  on `voyage:rerank-2.5` with `VOYAGE_API_KEY`.
 - **`openai:text-embedding-3-small --dim 1280`** — the keep-your-width
   alternative: OpenAI's text-embedding-3 models support flexible dims, so a
   1280d brain keeps its column (no schema rebuild). No reranker coverage on
   the OpenAI key.
 
-Set the target's API key via `export VOYAGE_API_KEY=...`, via
-`gbrain config set voyage_api_key ...` (API keys are routed to the file
+Set the target's API key via `export NVIDIA_API_KEY=...`, via
+`gbrain config set nvidia_api_key ...` (API keys are routed to the file
 plane, which the provider pipeline reads), or by editing
 `~/.gbrain/config.json` directly.
 
@@ -56,7 +56,7 @@ plane, which the provider pipeline reads), or by editing
 it.** A different width triggers the destructive schema transition (column +
 index rebuild across all three dim-pinned tables); the same width skips it
 entirely. `gbrain doctor` (check `provider_sunset`, for providers with an
-announced shutdown) prints target-aware paste-ready commands — the Voyage
+announced shutdown) prints target-aware paste-ready commands — the NVIDIA
 command at its valid 1024 width, plus an OpenAI keep-width alternative with
 your actual width filled in when that width is valid there — reading the real
 `vector(N)` column, not the config value, which can drift.

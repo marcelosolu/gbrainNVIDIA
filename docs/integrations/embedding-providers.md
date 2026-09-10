@@ -1,6 +1,6 @@
 # Embedding providers
 
-GBrain ships with 17 embedding-provider recipes covering Voyage (the default), OpenAI, OpenRouter (single key, many hosted models), the major hosted alternatives, four local options, a universal escape hatch (LiteLLM proxy), and the deprecated ZeroEntropy recipe (hosted API shuts down 2026-09-04). Run `gbrain providers list` to see the live registry; `gbrain providers explain --json` emits a machine-readable matrix for agents.
+gbrainNVIDIA ships with 16 embedding-provider recipes covering NVIDIA NIM (the default), Voyage, OpenAI, OpenRouter (single key, many hosted models), the major hosted alternatives, four local options, a universal escape hatch (LiteLLM proxy), and the deprecated ZeroEntropy recipe (hosted API shuts down 2026-09-04). Run `gbrain providers list` to see the live registry; `gbrain providers explain --json` emits a machine-readable matrix for agents.
 
 This page is the human-readable counterpart: capability per provider, env-var setup, dimensions, cost, and known constraints.
 
@@ -10,12 +10,12 @@ This page is the human-readable counterpart: capability per provider, env-var se
 gbrain providers list                          # see all providers
 gbrain providers env <provider-id>             # see required env vars
 gbrain providers test --model openai:text-embedding-3-large   # smoke-test
-gbrain init --pglite --model voyage            # use a non-default provider
+gbrain init --pglite --model openai            # use a non-default provider
 ```
 
 ## Init resolves your provider from your keys
 
-`gbrain init --pglite` auto-detects which provider to use from your provider keys — env vars or the file plane (`~/.gbrain/config.json` fields like `voyage_api_key`; env wins when both are set). With `VOYAGE_API_KEY` set, you get Voyage (`voyage:voyage-4` @ 1024d). With `OPENAI_API_KEY` set, you get OpenAI. Whenever a Voyage key is present — even if a different embedding provider is picked — the mode-bundle reranker default (`voyage:rerank-2.5`) is already ready, so init writes no reranker row at all (one key covers both; it just prints `Reranker: voyage:rerank-2.5 (mode-bundle default)`); keyed installs without a Voyage key get `search.reranker.enabled false` written instead. If multiple provider keys are set, init fires an interactive picker (non-TTY auto-picks the Voyage default when its key is present). ZeroEntropy is deprecated and excluded from both auto-pick and the picker — explicit `--embedding-model zeroentropyai:*` still works, with a loud warning. With no provider keys at all, init continues keyless (keyword-only search) with a loud notice; recover later with `gbrain init --force --embedding-model voyage:voyage-4`. Explicit flags (`--embedding-model`, `--no-embedding`) always win over key detection.
+`gbrain init --pglite` auto-detects which provider to use from your provider keys — env vars or the file plane (`~/.gbrain/config.json` fields like `nvidia_api_key`; env wins when both are set). With `NVIDIA_API_KEY` set, you get NVIDIA (`nvidia:nv-embed-v1` @ 1024d; free key at https://build.nvidia.com). With `OPENAI_API_KEY` set, you get OpenAI. NVIDIA NIM exposes no rerank API, so the reranker default is Voyage `rerank-2.5` — whenever a Voyage key is present, the mode-bundle reranker default is already ready and init writes no reranker row at all (it just prints `Reranker: voyage:rerank-2.5 (mode-bundle default)`); keyed installs without a Voyage key get `search.reranker.enabled false` written instead. If multiple provider keys are set, init fires an interactive picker (non-TTY auto-picks the NVIDIA default when its key is present). ZeroEntropy is deprecated and excluded from both auto-pick and the picker — explicit `--embedding-model zeroentropyai:*` still works, with a loud warning. With no provider keys at all, init continues keyless (keyword-only search) with a loud notice; recover later with `gbrain init --force --embedding-model nvidia:nv-embed-v1`. Explicit flags (`--embedding-model`, `--no-embedding`) always win over key detection.
 
 The resolved provider + dimensions get persisted to `~/.gbrain/config.json` atomically, so subsequent runs are deterministic across releases.
 
@@ -23,10 +23,11 @@ The resolved provider + dimensions get persisted to `~/.gbrain/config.json` atom
 
 | Provider | env vars | default dims | cost ($/1M tokens) | local? | multimodal? |
 |---|---|---|---|---|---|
-| `voyage` (**default** — `voyage-4` @ 1024d; `rerank-2.5` reranker on the same key) | `VOYAGE_API_KEY` | 1024 | 0.06 (`voyage-4`) | no | yes (`voyage-multimodal-3`) |
+| `nvidia` (**default** — `nv-embed-v1` @ 1024d via NVIDIA NIM; free key at build.nvidia.com) | `NVIDIA_API_KEY` | 1024 | varies | no | no |
+| `voyage` (`voyage-4` @ 1024d; `rerank-2.5` reranker on the same key — reranker default) | `VOYAGE_API_KEY` | 1024 | 0.06 (`voyage-4`) | no | yes (`voyage-multimodal-3`) |
 | `openai` | `OPENAI_API_KEY` | 1536 | 0.13 | no | no |
 | `openrouter` | `OPENROUTER_API_KEY` | per-model (1536 for the default `openai/text-embedding-3-small`; unlisted ids require explicit dims) | 0.02 | no | model-dependent |
-| `zeroentropyai` — **DEPRECATED** (hosted API **shuts down 2026-09-04**; replacement `voyage:voyage-4` — see note below) | `ZEROENTROPY_API_KEY` | 2560 (Matryoshka to 1280/640/320/...) | 0.05 | no | no |
+| `zeroentropyai` — **DEPRECATED** (hosted API **shuts down 2026-09-04**; replacement `nvidia:nv-embed-v1` — see note below) | `ZEROENTROPY_API_KEY` | 2560 (Matryoshka to 1280/640/320/...) | 0.05 | no | no |
 | `google` | `GOOGLE_GENERATIVE_AI_API_KEY` | 768 | 0.025 | no | no |
 | `azure-openai` | `AZURE_OPENAI_API_KEY`, `AZURE_OPENAI_ENDPOINT`, `AZURE_OPENAI_DEPLOYMENT` | 1536 | 0.13 | no | no |
 | `minimax` | `MINIMAX_API_KEY` | 1536 | 0.07 | no | no |
@@ -43,7 +44,7 @@ The resolved provider + dimensions get persisted to `~/.gbrain/config.json` atom
 
 **Note on local providers.** Ollama, llama-server and LM Studio have no required API key, so they don't show up in env-detection auto-pick. Pick them explicitly with `--embedding-model ollama:<model>` to avoid silently routing to a daemon that may not be running. Ollama can also run local chat/expansion models; set those routes explicitly with `gbrain config set models.chat ollama:<model>` and related per-task model keys.
 
-**Note on the ZeroEntropy hosted API.** ZeroEntropy announced (2026-07-24) that its hosted endpoints shut down on **2026-09-04**, and the recipe is deprecated: init auto-pick and the interactive picker exclude it (explicit `--embedding-model zeroentropyai:*` still works, with a loud warning), every ZE embed/rerank call prints a once-per-process deprecation warning, and `gbrain providers` annotates it DEPRECATED (`providers env zeroentropyai` prints the deprecation notice + migration command instead of the signup funnel, `providers explain` leads the row with ⚠ regardless of key readiness, and `gbrain doctor`'s ZE missing-key hint is migration-first). A brain still embedding through the hosted API loses semantic retrieval entirely on that date — query embedding uses the same endpoint, so existing vectors become unqueryable, not just new content. The off-ramp: `gbrain migrate embeddings --to voyage:voyage-4 --dim 1024 --dry-run` (cost preview), then `--yes`. 1280 is not a valid Voyage width (valid: 256/512/1024/2048), so a 1280d brain gets a one-time schema/HNSW rebuild to 1024; the OpenAI alternative keeps the width (flexible dims): `--to openai:text-embedding-3-small --dim 1280`. See [the migration guide](../guides/embedding-migration.md). Self-hosting the Apache-2.0 zembed-1 weights keeps every existing vector with zero re-embed, but the endpoint must speak ZeroEntropy's wire dialect — a generic OpenAI-compatible llama-server/Ollama will NOT work without a compat proxy (details in [`docs/ai-providers/zeroentropy.md`](../ai-providers/zeroentropy.md)). `gbrain doctor` (check `provider_sunset`) flags affected brains — including ZE-backed custom embedding columns — and prints target-aware paste-ready commands (Voyage at 1024; OpenAI keep-width when the brain's actual width is valid there); accepted the risk? `gbrain config set doctor.suppress_provider_sunset true` silences it.
+**Note on the ZeroEntropy hosted API.** ZeroEntropy announced (2026-07-24) that its hosted endpoints shut down on **2026-09-04**, and the recipe is deprecated: init auto-pick and the interactive picker exclude it (explicit `--embedding-model zeroentropyai:*` still works, with a loud warning), every ZE embed/rerank call prints a once-per-process deprecation warning, and `gbrain providers` annotates it DEPRECATED (`providers env zeroentropyai` prints the deprecation notice + migration command instead of the signup funnel, `providers explain` leads the row with ⚠ regardless of key readiness, and `gbrain doctor`'s ZE missing-key hint is migration-first). A brain still embedding through the hosted API loses semantic retrieval entirely on that date — query embedding uses the same endpoint, so existing vectors become unqueryable, not just new content. The off-ramp: `gbrain migrate embeddings --to nvidia:nv-embed-v1 --dim 1024 --dry-run` (cost preview), then `--yes`. 1280 is not a valid NVIDIA width (valid: 1024/2048/4096), so a 1280d brain gets a one-time schema/HNSW rebuild to 1024; the OpenAI alternative keeps the width (flexible dims): `--to openai:text-embedding-3-small --dim 1280`. See [the migration guide](../guides/embedding-migration.md). Self-hosting the Apache-2.0 zembed-1 weights keeps every existing vector with zero re-embed, but the endpoint must speak ZeroEntropy's wire dialect — a generic OpenAI-compatible llama-server/Ollama will NOT work without a compat proxy (details in [`docs/ai-providers/zeroentropy.md`](../ai-providers/zeroentropy.md)). `gbrain doctor` (check `provider_sunset`) flags affected brains — including ZE-backed custom embedding columns — and prints target-aware paste-ready commands (NVIDIA at 1024; OpenAI keep-width when the brain's actual width is valid there); accepted the risk? `gbrain config set doctor.suppress_provider_sunset true` silences it.
 
 ## If first import fails
 
@@ -61,7 +62,7 @@ The doctor distinguishes two repair paths:
   ```
   gbrain migrate embeddings --to <provider>:<model> --dim <N>
   ```
-  Leaving ZeroEntropy specifically: `gbrain migrate embeddings --to voyage:voyage-4 --dim 1024`
+  Leaving ZeroEntropy specifically: `gbrain migrate embeddings --to nvidia:nv-embed-v1 --dim 1024`
   (the full playbook is `skills/migrations/v0.46.3.0.md`).
 
 ## Decision tree
@@ -81,13 +82,13 @@ The doctor distinguishes two repair paths:
 
 ### OpenAI
 
-The main alternative to the Voyage default (its flexible-dim `text-embedding-3` models can keep an existing column width during a provider migration). Set `OPENAI_API_KEY`. Models: `text-embedding-3-large` (3072 max, 1536 default), `text-embedding-3-small` (1536). Matryoshka via the `dimensions` field — gbrain pins it from `embedding_dimensions` config so existing 1536-dim brains stay aligned across SDK upgrades.
+The main alternative to the NVIDIA default (its flexible-dim `text-embedding-3` models can keep an existing column width during a provider migration). Set `OPENAI_API_KEY`. Models: `text-embedding-3-large` (3072 max, 1536 default), `text-embedding-3-small` (1536). Matryoshka via the `dimensions` field — gbrain pins it from `embedding_dimensions` config so existing 1536-dim brains stay aligned across SDK upgrades.
 
 Optional `OPENAI_BASE_URL` — point the native OpenAI provider at an OpenAI-compatible gateway. A bare host is normalized to carry the `/v1` suffix automatically (so `https://gw.example.com` and `https://gw.example.com/v1` both work); when unset, the SDK's default endpoint is untouched. With `OPENAI_BASE_URL` set, embedding does not require `OPENAI_API_KEY` — the override targets local OpenAI-compatible servers (LM Studio, vLLM) that ignore auth, so gbrain sends a placeholder key instead of refusing. `ANTHROPIC_BASE_URL` gets the same normalization for Anthropic chat/expansion calls.
 
 ### Voyage AI
 
-**The default provider** — new installs get `voyage-4` @ 1024d ($0.06/M) plus the `rerank-2.5` reranker on the same key. Best-in-class quality on the Voyage 4 family (Jan 2026 release). Set `VOYAGE_API_KEY`. Models: `voyage-4-large`, `voyage-4`, `voyage-4-lite`, `voyage-4-nano`, `voyage-code-4` (code-tuned, hosted, flexible dims, $0.12/M), `voyage-3.5`, `voyage-code-3`, `voyage-finance-2`, `voyage-law-2`, `voyage-multimodal-3` (text + image).
+Available for embeddings too, and **the reranker home**: `rerank-2.5` is the mode-bundle reranker default, riding the same `VOYAGE_API_KEY` as Voyage embeddings. Set `VOYAGE_API_KEY` to enable reranking. Models: `voyage-4-large`, `voyage-4`, `voyage-4-lite`, `voyage-4-nano`, `voyage-code-4` (code-tuned, hosted, flexible dims, $0.12/M), `voyage-3.5`, `voyage-code-3`, `voyage-finance-2`, `voyage-law-2`, `voyage-multimodal-3` (text + image).
 
 Voyage 4 family shares an embedding space across all variants, so you can index with `voyage-4` and later point the query model at `voyage-4-large` or `voyage-4-lite` without reindexing. Dims: 256, 512, 1024, 2048. **2048 exceeds pgvector's HNSW cap of 2000** — those brains fall back to exact vector scans (still correct, just slower).
 

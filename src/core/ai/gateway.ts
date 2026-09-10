@@ -34,6 +34,7 @@ import { z } from 'zod';
 import { truncateUtf8 } from '../text-safe.ts';
 import {
   BudgetTracker,
+  BudgetExhausted,
   extractUsageFromError as _extractUsageFromError,
   type BudgetKind,
 } from '../budget/budget-tracker.ts';
@@ -47,6 +48,7 @@ import type {
   TouchpointKind,
 } from './types.ts';
 import { resolveRecipe, assertTouchpoint, parseModelId, embeddingDimsForModel } from './model-resolver.ts';
+import { serializeModelId } from '../model-id.ts';
 import { recordChatUsage } from './chat-usage.ts';
 import {
   OPENROUTER_CACHE_HEADER,
@@ -58,7 +60,7 @@ import { parseLlmJson } from '../llm-json.ts';
 import type { BrainEngine } from '../engine.ts';
 import { dimsProviderOptions } from './dims.ts';
 import { hasAnthropicKey, stashGatewayAnthropicKeyFromEnv } from './anthropic-key.ts';
-import { AIConfigError, AITransientError, normalizeAIError } from './errors.ts';
+import { AIConfigError, AIServiceError, AITransientError, normalizeAIError } from './errors.ts';
 import { getProviderCapabilities } from './capabilities.ts';
 import { runGuardrails, hasGuardrails, type GuardrailHook } from '../guardrails.ts';
 import { loadConfig } from '../config.ts';
@@ -1936,7 +1938,7 @@ export async function embed(texts: string[], opts?: EmbedOpts): Promise<Float32A
     const totalChars = truncated.reduce((s, t) => s + t.length, 0);
     const estimatedInputTokens = Math.ceil(totalChars / Math.max(charsPerToken, 1));
     tracker.reserve({
-      modelId: `${recipe.id}:${modelId}`,
+      modelId: serializeModelId(recipe.id, modelId),
       estimatedInputTokens,
       maxOutputTokens: 0,
       kind: 'embed',
@@ -2017,7 +2019,7 @@ export async function embed(texts: string[], opts?: EmbedOpts): Promise<Float32A
       const inputTokens = Math.ceil(totalChars / Math.max(charsPerToken, 1));
       try {
         tracker.record({
-          modelId: `${recipe.id}:${modelId}`,
+          modelId: serializeModelId(recipe.id, modelId),
           inputTokens,
           outputTokens: 0,
           embeddingDims: expected,
@@ -2220,7 +2222,7 @@ async function embedSubBatch(
       const right = await embedSubBatch(texts.slice(mid), model, providerOpts, expectedDims, recipe, modelId, opts);
       return [...left, ...right];
     }
-    throw normalizeAIError(err, `embed(${recipe.id}:${modelId})`);
+    throw normalizeAIError(err, `embed(${serializeModelId(recipe.id, modelId)})`);
   }
 }
 
@@ -2311,8 +2313,8 @@ export async function embedMultimodal(
   // multimodal_models allow-list, enforce it pre-flight.
   if (touchpoint.multimodal_models && !touchpoint.multimodal_models.includes(parsed.modelId)) {
     throw new AIConfigError(
-      `${recipe.id}:${parsed.modelId} is not a multimodal-capable model.`,
-      `Use one of: ${touchpoint.multimodal_models.map(m => `${recipe.id}:${m}`).join(', ')}.`,
+      `${serializeModelId(recipe.id, parsed.modelId)} is not a multimodal-capable model.`,
+      `Use one of: ${touchpoint.multimodal_models.map(m => serializeModelId(recipe.id, m)).join(', ')}.`,
     );
   }
 
@@ -2396,7 +2398,7 @@ export async function embedMultimodal(
       }), responseInvocationUsage);
     } catch (err) {
       if (isAIInvocationPolicyError(err)) throw err;
-      throw normalizeAIError(err, `embedMultimodal(${recipe.id}:${parsed.modelId})`);
+      throw normalizeAIError(err, `embedMultimodal(${serializeModelId(recipe.id, parsed.modelId)})`);
     }
 
     if (!res.ok) {
@@ -2542,7 +2544,7 @@ async function embedMultimodalOpenAICompat(
       }), responseInvocationUsage);
     } catch (err) {
       if (isAIInvocationPolicyError(err)) throw err;
-      throw normalizeAIError(err, `embedMultimodal(${recipe.id}:${modelId})`);
+      throw normalizeAIError(err, `embedMultimodal(${serializeModelId(recipe.id, modelId)})`);
     }
 
     if (!res.ok) {
@@ -2591,7 +2593,7 @@ async function embedMultimodalOpenAICompat(
     // (no recipe declaration AND no config override).
     if (expectedDims > 0 && row.embedding.length !== expectedDims) {
       throw new AIConfigError(
-        `${recipe.id}:${modelId} returned ${row.embedding.length}-dim vector; expected ${expectedDims}.`,
+        `${serializeModelId(recipe.id, modelId)} returned ${row.embedding.length}-dim vector; expected ${expectedDims}.`,
         `The brain's embedding column is fixed at ${expectedDims} dims; this model is incompatible. ` +
         `Either pick a model that returns ${expectedDims} dims, OR set --embedding-dimensions ${row.embedding.length} ` +
         `and reinitialize the embedding column at the new width.`,
@@ -2905,7 +2907,7 @@ export async function expand(query: string): Promise<string[]> {
 
   try {
     const { model, recipe, modelId } = await resolveExpansionProvider(getExpansionModel());
-    const modelLabel = `${recipe.id}:${modelId}`;
+    const modelLabel = serializeModelId(recipe.id, modelId);
 
     let expansions: string[];
 
@@ -3847,7 +3849,11 @@ export function toAISDKTools(tools: ChatToolDef[] | undefined): Record<string, a
   }, {} as Record<string, any>);
 }
 
-export async function chat(opts: ChatOpts): Promise<ChatResult> {
+/**
+ * Execute one provider attempt. The public `chat()` wrapper below may retry
+ * transient provider failures on the configured fallback chain.
+ */
+async function chatOnce(opts: ChatOpts): Promise<ChatResult> {
   const tracker = __budgetStore.getStore() ?? null;
   const modelStrEarly = opts.model ?? getChatModel();
 
@@ -4162,6 +4168,184 @@ export async function chat(opts: ChatOpts): Promise<ChatResult> {
     _recordBudget(`${recipe.id}:${modelId}`, fallback.inputTokens, fallback.outputTokens);
     throw normalizeAIError(err, `chat(${recipe.id}:${modelId})`);
   }
+}
+
+/**
+ * Return only a bounded, credential-free provider label for diagnostics.
+ * Model ids are configuration input and must not be allowed to become a log
+ * channel for API keys, DSNs, headers, or arbitrary payloads.
+ */
+function safeChatModelLabel(model: string): string {
+  if (!/^[a-z0-9][a-z0-9._-]{0,31}:[a-z0-9][a-z0-9_./:@+-]{0,191}$/i.test(model)) {
+    return '<configured-route>';
+  }
+  return model;
+}
+
+/**
+ * Read explicit retry signals from an error and its short cause chain. The
+ * gateway normalizes unknown errors as transient for ordinary callers, but
+ * fallback must be fail-closed: a generic Error is not enough to switch
+ * providers.
+ */
+function hasExplicitTransientSignal(err: unknown): boolean {
+  const seen = new Set<object>();
+  let current: unknown = err;
+  for (let depth = 0; depth < 4 && current; depth++) {
+    if (typeof current === 'object' && current !== null) {
+      if (seen.has(current)) break;
+      seen.add(current);
+    }
+    const value = current as {
+      status?: unknown;
+      statusCode?: unknown;
+      apiErrorStatus?: unknown;
+      code?: unknown;
+      name?: unknown;
+      message?: unknown;
+      cause?: unknown;
+    };
+    const statuses = [value.status, value.statusCode, value.apiErrorStatus]
+      .filter((status): status is number => typeof status === 'number');
+    if (statuses.some((status) => status === 429 || status >= 500 && status <= 599)) return true;
+    const code = typeof value.code === 'string' ? value.code.toUpperCase() : '';
+    if (/^(ETIMEDOUT|ECONNRESET|ECONNREFUSED|EHOSTUNREACH|ENETUNREACH|UND_ERR_CONNECT_TIMEOUT|UND_ERR_HEADERS_TIMEOUT)$/.test(code)) {
+      return true;
+    }
+    const name = typeof value.name === 'string' ? value.name : '';
+    const message = typeof value.message === 'string' ? value.message : '';
+    if (/^(AbortError|TimeoutError)$/.test(name) ||
+        /\b(?:HTTP\s+(?:429|5\d\d)|status(?:\s+code)?\s*[:= ]\s*(?:429|5\d\d)|timed?\s*out|timeout|rate[- ]?limit(?:ed|ing)?|too many requests|service unavailable|bad gateway|gateway timeout|temporarily unavailable|fetch failed|socket hang up)\b/i.test(message)) {
+      return true;
+    }
+    current = value.cause;
+  }
+  return false;
+}
+
+/**
+ * Whether a failed provider attempt can safely move to the next configured
+ * route. Budget admission failures and caller aborts never fail over.
+ */
+function canFailoverChatError(err: unknown, callerSignal?: AbortSignal): boolean {
+  if (callerSignal?.aborted || err instanceof BudgetExhausted) return false;
+  return hasExplicitTransientSignal(err);
+}
+
+function redactChatSensitiveText(input: string): string {
+  // Providers may double-escape JSON in nested error envelopes. Decode only
+  // bounded Unicode/quote escapes for scanning; never mutate the original error.
+  let scanInput = input;
+  for (let layer = 0; layer < 3; layer++) {
+    const decoded = scanInput
+      .replace(/\\\\u([0-9a-f]{4})/gi, (_match, hex: string) => String.fromCharCode(parseInt(hex, 16)))
+      .replace(/\\\\"/g, '"')
+      .replace(/\\\\'/g, "'");
+    if (decoded === scanInput) break;
+    scanInput = decoded;
+  }
+  const keyPattern = /(?:"(?:api[_ -]?key|access[_ -]?token|refresh[_ -]?token|client[_ -]?secret|authorization|password|secret|token)"|'(?:api[_ -]?key|access[_ -]?token|refresh[_ -]?token|client[_ -]?secret|authorization|password|secret|token)'|(?:api[_ -]?key|access[_ -]?token|refresh[_ -]?token|client[_ -]?secret|authorization|password|secret|token))\s*[:=]\s*/gi;
+  const bearerPattern = /\bBearer\s+/gi;
+  const strongDelimiter = /[,;\n\r}\]]/;
+
+  const consumeValue = (start: number): number => {
+    if (start >= scanInput.length) return start;
+    const quote = scanInput[start];
+    let end = start;
+    if (quote === '"' || quote === "'") {
+      end = start + 1;
+      while (end < scanInput.length) {
+        if (scanInput[end] === '\\\\') {
+          end += 2;
+          continue;
+        }
+        if (scanInput[end] === quote) {
+          end += 1;
+          break;
+        }
+        end += 1;
+      }
+      // A quote followed by identifier text is ambiguous (e.g. \"x\"TAIL);
+      // consume through a strong delimiter instead of leaking the suffix.
+      while (end < scanInput.length && !strongDelimiter.test(scanInput[end]!)) end += 1;
+      return end;
+    }
+    end = start;
+    while (end < scanInput.length && !strongDelimiter.test(scanInput[end]!)) end += 1;
+    return end;
+  };
+
+  let output = '';
+  let cursor = 0;
+  while (cursor < scanInput.length) {
+    keyPattern.lastIndex = cursor;
+    bearerPattern.lastIndex = cursor;
+    const key = keyPattern.exec(scanInput);
+    const bearer = bearerPattern.exec(scanInput);
+    let match: RegExpExecArray | null = null;
+    let valueStart = -1;
+    if (key && (!bearer || key.index <= bearer.index)) {
+      match = key;
+      valueStart = key.index + key[0].length;
+    } else if (bearer) {
+      match = bearer;
+      valueStart = bearer.index + bearer[0].length;
+    }
+    if (!match || valueStart < 0) break;
+    output += scanInput.slice(cursor, valueStart) + '[redacted]';
+    cursor = consumeValue(valueStart);
+  }
+  output += scanInput.slice(cursor);
+  return output
+    .replace(/(?:postgres(?:ql)?|mysql|redis):\/\/[^\s,;}\]]+/gi, '[connection-redacted]')
+    .slice(0, 800);
+}
+
+function sanitizedChatError(err: unknown): AIServiceError {
+  const normalized = err instanceof AIServiceError ? err : normalizeAIError(err, 'chat');
+  const safeMessage = redactChatSensitiveText(normalized.message);
+  const safe = normalized instanceof AIConfigError
+    ? new AIConfigError(safeMessage, normalized.fix)
+    : new AITransientError(safeMessage);
+  safe.apiErrorStatus = normalized.apiErrorStatus;
+  safe.status = normalized.status;
+  return safe;
+}
+
+/**
+ * Run a chat turn through the primary model and then the configured fallback
+ * chain. The chain is deliberately bounded and ordered: the first entry is
+ * the caller-selected/default model, followed by explicit routes such as
+ * OpenRouter free models. Only explicit transient signals (429, 5xx, timeout,
+ * or transport failure) activate failover; configuration errors stay visible.
+ * Each attempt keeps its own budget/usage accounting, and a configured budget
+ * tracker enforces its aggregate cap across those attempts.
+ */
+export async function chat(opts: ChatOpts): Promise<ChatResult> {
+  const primary = opts.model ?? getChatModel();
+  const candidates = [primary, ...getChatFallbackChain()]
+    .filter((model) => model.length > 0)
+    .filter((model, index, all) => all.indexOf(model) === index)
+    .slice(0, 4);
+
+  let lastError: unknown;
+  let fallbackAttempted = false;
+  for (let index = 0; index < candidates.length; index++) {
+    const model = candidates[index]!;
+    try {
+      return await chatOnce({ ...opts, model });
+    } catch (err) {
+      lastError = err;
+      const next = candidates[index + 1];
+      if (!next || !canFailoverChatError(err, opts.abortSignal)) {
+        throw fallbackAttempted ? sanitizedChatError(err) : err;
+      }
+      fallbackAttempted = true;
+      console.warn(`[ai.gateway] transient provider failure on ${safeChatModelLabel(model)}; trying configured fallback`);
+    }
+  }
+
+  throw sanitizedChatError(lastError ?? new AITransientError('No chat provider candidate was configured.'));
 }
 
 // ---- Tool loop (v0.38 — D11 + D6/D7 gateway-native subagent path) ----

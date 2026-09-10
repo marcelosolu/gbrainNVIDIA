@@ -25,12 +25,22 @@ import { MODEL_PRICING } from '../src/core/takes-quality-eval/pricing.ts';
 import { estimateAnthropicCost } from '../src/core/brain-score-recommendations.ts';
 
 describe('CANONICAL_PRICING — table integrity', () => {
-  test('every entry has finite positive rates and a provider-prefixed key', () => {
+  test('every entry has finite non-negative rates and a provider-prefixed key', () => {
     for (const [key, p] of Object.entries(CANONICAL_PRICING)) {
       expect(Number.isFinite(p.input)).toBe(true);
       expect(Number.isFinite(p.output)).toBe(true);
-      expect(p.input).toBeGreaterThan(0);
-      expect(p.output).toBeGreaterThan(0);
+      // Zero is legitimate ONLY for free-tier routes (NVIDIA NIM dev credits,
+      // OpenRouter :free): the billed cost really is $0, and fabricating a
+      // "conservative" positive rate would over-report spend and trip
+      // --max-usd caps early. Every other entry must stay positive.
+      if (p.input === 0 || p.output === 0) {
+        expect(key.startsWith('nvidia:')).toBe(true);
+        expect(p.input).toBe(0);
+        expect(p.output).toBe(0);
+      } else {
+        expect(p.input).toBeGreaterThan(0);
+        expect(p.output).toBeGreaterThan(0);
+      }
       // Provider-prefixed key (sanity guard against a bare key sneaking in).
       // NOTE: deliberately NO output>=input invariant — symmetric pricing is
       // legitimate (e.g. together:...Llama-3.3 is 0.88/0.88).

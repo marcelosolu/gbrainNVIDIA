@@ -15,7 +15,7 @@
 import { describe, test, expect } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { splitProviderModelId, normalizeModelId } from '../src/core/model-id.ts';
+import { splitProviderModelId, normalizeModelId, serializeModelId } from '../src/core/model-id.ts';
 
 const REPO_ROOT = join(import.meta.dir, '..');
 const readSrc = (rel: string) => readFileSync(join(REPO_ROOT, rel), 'utf8');
@@ -217,5 +217,27 @@ describe('normalize-everywhere structural guards (#1698)', () => {
     }
     // The one canonical definition lives here.
     expect(readSrc('src/core/ai/anthropic-key.ts')).toMatch(/export function hasAnthropicKey\s*\(/);
+  });
+});
+
+describe('serializeModelId (fork: no doubled provider prefix)', () => {
+  test('strips a redundant catalog-form provider prefix', () => {
+    // Recipes store catalog form (`nvidia/nv-embed-v1`); naive
+    // `${provider}:${model}` concatenation would write the doubled
+    // `nvidia:nvidia/nv-embed-v1` into fresh configs.
+    expect(serializeModelId('nvidia', 'nvidia/nv-embed-v1')).toBe('nvidia:nv-embed-v1');
+    expect(serializeModelId('nvidia', 'nvidia/nemotron-3-ultra-550b-a55b')).toBe(
+      'nvidia:nemotron-3-ultra-550b-a55b',
+    );
+  });
+
+  test('leaves bare model ids untouched', () => {
+    expect(serializeModelId('voyage', 'voyage-4')).toBe('voyage:voyage-4');
+    expect(serializeModelId('anthropic', 'claude-sonnet-4-6')).toBe('anthropic:claude-sonnet-4-6');
+  });
+
+  test('round-trips through splitProviderModelId', () => {
+    const id = serializeModelId('nvidia', 'nvidia/nv-embed-v1');
+    expect(splitProviderModelId(id)).toEqual({ provider: 'nvidia', model: 'nv-embed-v1' });
   });
 });

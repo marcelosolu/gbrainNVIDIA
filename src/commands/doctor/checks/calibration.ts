@@ -330,8 +330,13 @@ export async function checkAbandonedThreads(engine: BrainEngine): Promise<Check>
            AND superseded_by IS NULL
            AND weight >= 0.7
            AND since_date IS NOT NULL
-           AND (since_date || CASE WHEN length(since_date) = 7 THEN '-01' ELSE '' END)::date
-               < (now() - INTERVAL '12 months')`,
+           AND CASE
+                 WHEN since_date ~ '^[0-9]{4}-(0[1-9]|1[0-2])$'
+                   THEN to_date(since_date || '-01', 'YYYY-MM-DD')
+                 WHEN since_date ~ '^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$'
+                   THEN to_date(since_date, 'YYYY-MM-DD')
+                 ELSE NULL
+               END < (now() - INTERVAL '12 months')`,
     );
     const count = rows[0]?.count ?? 0;
     if (count === 0) {

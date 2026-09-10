@@ -157,10 +157,12 @@ describe('classifyCapabilities (D6 — three-tier capability verdict)', () => {
     expect(minimax.supportsSubagentLoop).toBe(false);
   });
 
-  it('keeps unusable:no_tools precedence when tool calling is missing too', () => {
-    // nvidia declares BOTH supports_tools: false and supports_subagent_loop:
-    // false — the stronger no_tools verdict wins.
-    expect(classifyCapabilities('nvidia:nvidia/nemotron-3-super-120b-a12b')).toBe('unusable:no_tools');
+  it('nvidia chat models report tool support (fork: validated tool-calling)', () => {
+    // NVIDIA-only fork (2026-09-08): the nvidia recipe declares supports_tools:
+    // true and supports_subagent_loop: true (Ultra validated in production),
+    // so Nemotron chat routes no longer get the unusable:no_tools verdict —
+    // they classify as degraded:no_caching like other non-caching providers.
+    expect(classifyCapabilities('nvidia:nemotron-3-super-120b-a12b')).toBe('degraded:no_caching');
   });
 
   it('returns unusable:no_tools for Ollama subagent loops', () => {

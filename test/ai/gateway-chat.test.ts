@@ -5,7 +5,7 @@
  *   - chat() resolves provider:model strings + aliases
  *   - assertTouchpoint surfaces chat-only providers correctly
  *   - getChatModel() default + override
- *   - chat_fallback_chain plumbing (config plumbing only — chatWithFallback ships in commit 3)
+ *   - chat_fallback_chain plumbing + transient provider failover
  *   - new openai-compat recipes (deepseek, groq, together) parse + resolve
  *   - new ChatTouchpoint shape: supports_subagent_loop, supports_prompt_cache
  *   - mapStopReason via the chat() boundary (mocked client) — refusal / content_filter / tool_calls / end / length
@@ -27,9 +27,10 @@ import {
   parseExpansionResponse,
   chat,
   __setGenerateTextTransportForTests,
+  __setChatTransportForTests,
 } from '../../src/core/ai/gateway.ts';
 import { parseModelId, resolveRecipe, assertTouchpoint } from '../../src/core/ai/model-resolver.ts';
-import { AIConfigError } from '../../src/core/ai/errors.ts';
+import { AIConfigError, AITransientError } from '../../src/core/ai/errors.ts';
 import { listRecipes, getRecipe } from '../../src/core/ai/recipes/index.ts';
 import type { Recipe } from '../../src/core/ai/types.ts';
 
@@ -255,6 +256,158 @@ describe('chat touchpoint — gateway config plumbing', () => {
   test('chat_fallback_chain defaults to empty array', () => {
     configureGateway({ env: {} });
     expect(getChatFallbackChain()).toEqual([]);
+  });
+
+  test('falls over to the first configured route on a transient provider failure', async () => {
+    const attempts: string[] = [];
+    __setChatTransportForTests(async (opts) => {
+      attempts.push(opts.model ?? '');
+      if (attempts.length === 1) throw new Error('HTTP 429');
+      return {
+        text: 'fallback-ok',
+        blocks: [{ type: 'text', text: 'fallback-ok' }],
+        stopReason: 'end',
+        usage: { input_tokens: 1, output_tokens: 1, cache_read_tokens: 0, cache_creation_tokens: 0 },
+        model: opts.model ?? '',
+        providerId: 'openrouter',
+      };
+    });
+    configureGateway({
+      chat_model: 'nvidia:nemotron-3-super-120b-a12b',
+      chat_fallback_chain: ['openrouter:nvidia/nemotron-3-ultra-550b-a55b:free'],
+      env: {},
+    });
+
+    const result = await chat({ messages: [{ role: 'user', content: 'hello' }] });
+    expect(result.text).toBe('fallback-ok');
+    expect(attempts).toEqual([
+      'nvidia:nemotron-3-super-120b-a12b',
+      'openrouter:nvidia/nemotron-3-ultra-550b-a55b:free',
+    ]);
+  });
+
+  test('caps the logical chat attempt count at four routes', async () => {
+    const attempts: string[] = [];
+    __setChatTransportForTests(async (opts) => {
+      attempts.push(opts.model ?? '');
+      throw new AITransientError('HTTP 503 unavailable');
+    });
+    configureGateway({
+      chat_model: 'nvidia:nemotron-3-super-120b-a12b',
+      chat_fallback_chain: [
+        'openrouter:nvidia/nemotron-3-ultra-550b-a55b:free',
+        'openrouter:openai/gpt-oss-120b:free',
+        'openrouter:deepseek/deepseek-r1:free',
+        'openrouter:extra/model:free',
+      ],
+      env: {},
+    });
+
+    await expect(chat({ messages: [{ role: 'user', content: 'hello' }] })).rejects.toThrow('HTTP 503');
+    expect(attempts).toHaveLength(4);
+  });
+
+  test('caller abort prevents fallback attempts', async () => {
+    const attempts: string[] = [];
+    const controller = new AbortController();
+    controller.abort();
+    __setChatTransportForTests(async (opts) => {
+      attempts.push(opts.model ?? '');
+      throw new AITransientError('timeout');
+    });
+    configureGateway({
+      chat_model: 'nvidia:nemotron-3-super-120b-a12b',
+      chat_fallback_chain: ['openrouter:nvidia/nemotron-3-ultra-550b-a55b:free'],
+      env: {},
+    });
+
+    await expect(chat({
+      abortSignal: controller.signal,
+      messages: [{ role: 'user', content: 'hello' }],
+    })).rejects.toThrow('timeout');
+    expect(attempts).toEqual(['nvidia:nemotron-3-super-120b-a12b']);
+  });
+  test('sanitizes quoted Bearer, assignment, JSON, and connection secrets after failover', async () => {
+    let attempt = 0;
+    __setChatTransportForTests(async () => {
+      attempt += 1;
+      if (attempt === 1) throw new Error('HTTP 429');
+      throw new Error('HTTP 503 Bearer "fake secret value" Bearer fake secret value; tail PASSWORD="abc,def" PASSWORD="abc"TAIL; normal {"clientSecret":"JSON-secret"} postgres://user:***@host/db');
+    });
+    configureGateway({
+      chat_model: 'nvidia:nemotron-3-super-120b-a12b',
+      chat_fallback_chain: ['openrouter:nvidia/nemotron-3-ultra-550b-a55b:free'],
+      env: {},
+    });
+
+    let caught: unknown;
+    try {
+      await chat({ messages: [{ role: 'user', content: 'hello' }] });
+    } catch (err) {
+      caught = err;
+    }
+    const message = String((caught as Error).message);
+    expect(message).not.toContain('fake secret value');
+    expect(message).not.toContain('secret value; tail');
+    expect(message).not.toContain('abc,def');
+    expect(message).not.toContain('abc"TAIL');
+    expect(message).not.toContain('JSON-secret');
+    expect(message).not.toContain('postgres://user:pass');
+    expect(message).toContain('[redacted]');
+  });
+
+  test('sanitizes doubly escaped JSON Unicode separators after failover', async () => {
+    let attempt = 0;
+    __setChatTransportForTests(async () => {
+      attempt += 1;
+      if (attempt === 1) throw new Error('HTTP 429');
+      throw new Error(String.raw`HTTP 503 {\\u0022clientSecret\\u003a\\u0022UNICODE-LEAK\\u0022}`);
+    });
+    configureGateway({
+      chat_model: 'nvidia:nemotron-3-super-120b-a12b',
+      chat_fallback_chain: ['openrouter:nvidia/nemotron-3-ultra-550b-a55b:free'],
+      env: {},
+    });
+
+    let caught: unknown;
+    try {
+      await chat({ messages: [{ role: 'user', content: 'hello' }] });
+    } catch (err) {
+      caught = err;
+    }
+    expect(String((caught as Error).message)).not.toContain('UNICODE-LEAK');
+  });
+
+  test('does not fail over unclassified errors', async () => {
+    const attempts: string[] = [];
+    __setChatTransportForTests(async (opts) => {
+      attempts.push(opts.model ?? '');
+      throw new Error('bad request');
+    });
+    configureGateway({
+      chat_model: 'nvidia:nemotron-3-super-120b-a12b',
+      chat_fallback_chain: ['openrouter:nvidia/nemotron-3-ultra-550b-a55b:free'],
+      env: {},
+    });
+
+    await expect(chat({ messages: [{ role: 'user', content: 'hello' }] })).rejects.toThrow('bad request');
+    expect(attempts).toEqual(['nvidia:nemotron-3-super-120b-a12b']);
+  });
+
+  test('does not fail over configuration errors', async () => {
+    const attempts: string[] = [];
+    __setChatTransportForTests(async (opts) => {
+      attempts.push(opts.model ?? '');
+      throw new AIConfigError('invalid model');
+    });
+    configureGateway({
+      chat_model: 'nvidia:nemotron-3-super-120b-a12b',
+      chat_fallback_chain: ['openrouter:nvidia/nemotron-3-ultra-550b-a55b:free'],
+      env: {},
+    });
+
+    await expect(chat({ messages: [{ role: 'user', content: 'hello' }] })).rejects.toThrow('invalid model');
+    expect(attempts).toEqual(['nvidia:nemotron-3-super-120b-a12b']);
   });
 
   test('isAvailable("chat") returns true when default Anthropic + key present', () => {

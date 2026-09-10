@@ -77,6 +77,31 @@ describe('extract_atoms configurable caps (#4540)', () => {
     expect(content.length).toBeGreaterThanOrEqual(DEFAULT_EXTRACT_MAX_INPUT_CHARS);
   });
 
+  test('NVIDIA extraction disables reasoning per call without changing the selected model', async () => {
+    await engine.setConfig('models.dream.extract_atoms', 'nvidia:nemotron-3-super-120b-a12b');
+    const nvidia = captureChat();
+    await runPhaseExtractAtoms(engine, {
+      sourceId: 'default',
+      _transcripts: [{ filePath: '/tmp/nvidia.txt', content: 'n'.repeat(3_000), contentHash: 'hn'.repeat(8) }],
+      _pages: [],
+      _chat: nvidia.chat,
+    });
+    expect(nvidia.calls).toHaveLength(1);
+    expect(nvidia.calls[0].model).toBe('nvidia:nemotron-3-super-120b-a12b');
+    expect(nvidia.calls[0].providerOptions).toEqual({ nvidia: { reasoningEffort: 'none' } });
+
+    await engine.setConfig('models.dream.extract_atoms', 'openai:gpt-5.4');
+    const other = captureChat();
+    await runPhaseExtractAtoms(engine, {
+      sourceId: 'default',
+      _transcripts: [{ filePath: '/tmp/other.txt', content: 'o'.repeat(3_000), contentHash: 'ho'.repeat(8) }],
+      _pages: [],
+      _chat: other.chat,
+    });
+    expect(other.calls).toHaveLength(1);
+    expect(other.calls[0].providerOptions).toBeUndefined();
+  });
+
   test('cycle.extract_atoms.max_input_chars / .max_output_tokens are honored', async () => {
     await engine.setConfig('cycle.extract_atoms.max_input_chars', '2000');
     await engine.setConfig('cycle.extract_atoms.max_output_tokens', '512');
