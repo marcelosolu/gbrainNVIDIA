@@ -323,7 +323,9 @@ prefer a label you already used over coining a near-synonym.
 
 If the transcript has no extractable idea (metadata rows, status dumps,
 empty fields, boilerplate), output exactly [] — never invent an atom and
-never explain in prose.
+never explain in prose. Do not answer this case with a sentence such as
+"no extractable ideas" or "nothing to extract"; the entire response must be
+exactly the JSON array [].
 
 Output ONLY the JSON array, no prose.`;
 
@@ -1456,9 +1458,31 @@ export type AtomsParseOutcome =
   | { ok: true; atoms: ExtractedAtom[] }
   | { ok: false; reason: string };
 
+/**
+ * Narrow recovery for models that explain an honest zero-yield in prose
+ * despite the prompt's `[]` requirement. Keep this conservative: refusal,
+ * error, and generic prose must remain failures and be retried/observed.
+ */
+function isExplicitZeroYieldProse(raw: string): boolean {
+  const text = raw.trim().toLowerCase().replace(/\s+/g, ' ');
+  if (text.length === 0 || text.length > 300) return false;
+  if (/[{}]/.test(text)) return false;
+  if (/\b(cannot|can't|unable|refus|sorry|error|request|help)\b/.test(text)) return false;
+  return (
+    /\bno extractable (?:idea|ideas|atom|atoms)\b/.test(text) ||
+    /\bnothing to extract\b/.test(text) ||
+    /\bno standalone (?:idea|ideas|atom|atoms)\b/.test(text)
+  );
+}
+
 export function parseAtomsOutcome(raw: string): AtomsParseOutcome {
   const direct = parseAtomsOutcomeInner(raw);
   if (direct.ok) return direct;
+  // Some providers violate the output-only instruction and explain a genuine
+  // zero-yield result in prose. Recover only the narrow, explicit no-result
+  // vocabulary; generic prose/refusals remain malformed so we never hide a
+  // real provider or parser failure.
+  if (isExplicitZeroYieldProse(raw)) return { ok: true, atoms: [] };
   // Same reasoning-block hazard as the facts extractor: `indexOf('[')` below
   // finds a bracket inside <think> when the model drafts its array while
   // reasoning, so the parse fails and the page is halted. Ladder, not a
