@@ -1,12 +1,12 @@
 # GBrain Installation Guide for AI Agents
 
-Read this entire file, then follow the steps. Ask the user for API keys when needed.
-Target: ~30 minutes to a fully working brain.
+Read this file, then follow the path appropriate to the user’s request. Default to adding keyless memory to their existing agent, preserving identity and unrelated configuration. API keys, enrichment, automatic capture, and a new personal-agent identity are separate choices.
 
-> **Scope note:** this guide installs the BRAIN (for agent platforms like OpenClaw
-> and Hermes, or a standalone brain). If you are Claude Code or Codex and the human
-> asked you to become their persistent personal agent — identity + memory + private
-> repo — follow `BOOTSTRAP_FOR_AGENTS.md` instead.
+> **Choose the installation path first.** Inside **[Grok Bot](docs/guides/grok-bot.md)** or **[Muse](docs/guides/muse.md)**, use their dedicated guide and `scripts/setup-in-agent.sh`; its receipt tracks repair and native enablement. For an **[existing hosted brain](docs/guides/hosted-harness-access.md)**, provision on the host and install the private handoff inside the harness. This guide covers a local brain for other existing agents.
+>
+> **Memory-only path:** install → initialize → relay and confirm the Step 3.5 search-mode choice → connect the harness → verify memory. Skip identity replacement, private-repo bootstrap, automatic capture, cron installation, and paid enrichment unless requested. A keyword-only brain needs no API key. The required search-mode choice still applies; published API cost examples are not prices for the user’s harness subscription.
+>
+> Only if the user asks for a **new persistent personal agent** with identity and a private repo, follow `BOOTSTRAP_FOR_AGENTS.md`.
 
 ## Step 0: If you are not Claude Code
 
@@ -15,9 +15,9 @@ protocol (install, read order, trust boundary, common tasks). Claude Code reads
 `CLAUDE.md` automatically and can skip ahead.
 
 If you fetched this file by URL without cloning yet, the companion files live at:
-- `https://raw.githubusercontent.com/marcelosolu/gbrainNVIDIA/main/AGENTS.md` — start here
-- `https://raw.githubusercontent.com/marcelosolu/gbrainNVIDIA/main/llms.txt` — full doc map
-- `https://raw.githubusercontent.com/marcelosolu/gbrainNVIDIA/main/llms-full.txt` — same map, inlined
+- `https://raw.githubusercontent.com/garrytan/gbrain/master/AGENTS.md` — start here
+- `https://raw.githubusercontent.com/garrytan/gbrain/master/llms.txt` — full doc map
+- `https://raw.githubusercontent.com/garrytan/gbrain/master/llms-full.txt` — same map, inlined
 
 ## Step 1: Install GBrain
 
@@ -25,17 +25,17 @@ If you fetched this file by URL without cloning yet, the companion files live at
 > **NEVER install from the npm registry.** GBrain is not distributed on npm; the npm
 > package named `gbrain` is an unrelated package. Do NOT run `npm install -g gbrain` or
 > `bun add -g gbrain` (note the missing `github:` prefix — that's the trap). The only
-> supported sources are `github:marcelosolu/gbrainNVIDIA` (optionally pinned as
-> `github:marcelosolu/gbrainNVIDIA#latest-stable`, the form the bootstrap flow mandates) and a
+> supported sources are `github:garrytan/gbrain` (optionally pinned as
+> `github:garrytan/gbrain#latest-stable`, the form the bootstrap flow mandates) and a
 > git clone, exactly as shown below.
 > If an unrelated npm install is already present, remove it first
 > (`npm uninstall -g gbrain` / `bun remove -g gbrain`); `gbrain doctor` also detects this.
 
 > **On Codex or Claude Code?** After the CLI install below, the plugin is the
 > fastest way to wire the MCP server + curated skills:
-> `codex plugin marketplace add marcelosolu/gbrainNVIDIA@codex-plugin` +
+> `codex plugin marketplace add garrytan/gbrain@codex-plugin` +
 > `codex plugin add gbrain@gbrain` (Claude Code: `/plugin marketplace add
-> marcelosolu/gbrainNVIDIA` + `/plugin install gbrain@gbrain`). Details:
+> garrytan/gbrain` + `/plugin install gbrain@gbrain`). Details:
 > docs/mcp/CODEX.md and docs/mcp/CLAUDE_CODE.md.
 
 Default path (Bun is required — gbrain is a Bun + TypeScript runtime):
@@ -43,7 +43,7 @@ Default path (Bun is required — gbrain is a Bun + TypeScript runtime):
 ```bash
 curl -fsSL https://bun.sh/install | bash
 export PATH="$HOME/.bun/bin:$PATH"
-bun install -g github:marcelosolu/gbrainNVIDIA
+bun install -g github:garrytan/gbrain
 ```
 
 Verify: `gbrain --version` should print a version number. If `gbrain` is not found,
@@ -56,23 +56,20 @@ restart the shell or add the PATH export to the shell profile.
 > to recover. If that doesn't work, fall back to the deterministic install path:
 >
 > ```bash
-> git clone https://github.com/marcelosolu/gbrainNVIDIA.git ~/gbrainNVIDIA && cd ~/gbrainNVIDIA
+> git clone https://github.com/garrytan/gbrain.git ~/gbrain && cd ~/gbrain
 > bun install && bun link
 > ```
 
 ## Step 2: API Keys
 
-Ask the user for these. gbrainNVIDIA defaults to NVIDIA NIM embeddings
-(`nvidia:nv-embed-v1` @ 1024d) with the Voyage reranker (`voyage:rerank-2.5`); OpenAI is the
-main alternative, chosen at init via `--embedding-model <provider:model>`. ZeroEntropy
+Skip API-key setup for the initial keyless memory path. If the user enables semantic retrieval or enrichment, configure NVIDIA explicitly. gbrainNVIDIA defaults to NVIDIA NIM embeddings (`nvidia:nv-embed-v1` @ 1024d); reranking is optional and uses Voyage `voyage:rerank-2.5` only when explicitly configured with `VOYAGE_API_KEY`. OpenAI is an optional alternative, chosen at init via `--embedding-model <provider:model>`. ZeroEntropy
 is deprecated (its hosted API shuts down 2026-09-04): init auto-pick and the picker
 exclude it, and every ZE embed/rerank prints a deprecation warning. **Existing brain
 still on ZeroEntropy (or any need to switch embedding/reranker models later)?** Follow
 the playbook at `skills/migrations/v0.46.3.0.md` — one command migrates both.
 
 ```bash
-export NVIDIA_API_KEY=nvapi-...   # embeddings (default provider)
-export VOYAGE_API_KEY=pa-...    # reranker only (voyage:rerank-2.5); optional — without it, search runs without reranking
+export VOYAGE_API_KEY=pa-...          # default embedding + reranker (one key covers both)
 export OPENAI_API_KEY=sk-...          # alternative for vector search; also powers automatic fact extraction + chat models
 export ANTHROPIC_API_KEY=sk-ant-...   # automatic fact extraction + chat models; also improves search via query expansion
 ```
@@ -100,11 +97,7 @@ gbrain doctor --json                  # verify all checks pass
 ```
 
 The user's markdown files (notes, docs, brain repo) are SEPARATE from this tool repo.
-Ask the user where their files are, or create a new brain repo:
-
-```bash
-mkdir -p ~/brain && cd ~/brain && git init
-```
+Use the user's chosen notes directory, or a separate managed memory directory. A Git repository is optional; do not create a private personal-agent repo for a memory-only install.
 
 Read `~/gbrain/docs/GBRAIN_RECOMMENDED_SCHEMA.md` and set up the MECE directory
 structure (people/, companies/, concepts/, etc.) inside the user's brain repo,
