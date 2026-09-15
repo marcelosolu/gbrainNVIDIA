@@ -4002,7 +4002,7 @@ export async function buildChecks(
   // v0.32.3 search-lite — mode + eval_drift surfaces. Status stays 'ok' per
   // [CDX-20]; hint lives in `message`.
   if (engine !== null) {
-    progress.heartbeat('chat_fallback_chain_inert');
+    progress.heartbeat('chat_fallback_chain');
     const inertFallbackChain = await checkChatFallbackChain(engine);
     if (inertFallbackChain) checks.push(inertFallbackChain);
     progress.heartbeat('search_mode');

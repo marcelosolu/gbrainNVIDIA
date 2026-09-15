@@ -151,8 +151,11 @@ describe('normalizeModelId (#1698)', () => {
     expect(normalizeModelId('anthropic/claude-sonnet-4-6')).toBe('anthropic:claude-sonnet-4-6');
   });
 
-  test('bare → anthropic: default', () => {
-    expect(normalizeModelId('claude-sonnet-4-6')).toBe('anthropic:claude-sonnet-4-6');
+  // fork (gbrainNVIDIA): the bare-id default is nvidia, never anthropic —
+  // an unprefixed id must not silently route to the paid provider the fork
+  // removes. Explicit second args still work (next test).
+  test('bare → nvidia: default on this fork', () => {
+    expect(normalizeModelId('claude-sonnet-4-6')).toBe('nvidia:claude-sonnet-4-6');
   });
 
   test('colon identity (already provider:model)', () => {

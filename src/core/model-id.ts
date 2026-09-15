@@ -72,7 +72,11 @@ export function splitProviderModelId(input: string | null | undefined): SplitPro
  *
  * Behavior (built on `splitProviderModelId`, so it inherits colon-first precedence):
  *   - `anthropic/claude-sonnet-4-6`        → `anthropic:claude-sonnet-4-6`  (slash → colon)
- *   - `claude-sonnet-4-6`                  → `anthropic:claude-sonnet-4-6`  (bare → default)
+ *   - `nemotron-3-super-120b-a12b`         → `nvidia:nemotron-3-super-120b-a12b`  (bare → default)
+ *     FORK (gbrainNVIDIA): the default provider is 'nvidia', NOT anthropic. An
+ *     unprefixed model id must never silently route to the paid Anthropic
+ *     provider this fork removes. Call sites that pass an explicit second
+ *     argument (e.g. normalizeModelId(x, 'openai')) are unaffected.
  *   - `anthropic:claude-sonnet-4-6`        → unchanged                      (colon identity)
  *   - `openrouter:anthropic/claude-4.6`    → unchanged   (nested: inner slash preserved)
  *   - ''/'   ' (empty/whitespace)          → returned as-is (downstream throws loudly)
@@ -80,7 +84,7 @@ export function splitProviderModelId(input: string | null | undefined): SplitPro
  *                                            empty-string provider; downstream throws loudly)
  */
 
-export function normalizeModelId(input: string, defaultProvider = 'anthropic'): string {
+export function normalizeModelId(input: string, defaultProvider = 'nvidia'): string {
   const { provider, model } = splitProviderModelId(input);
   // Return unchanged (so resolveRecipe throws loudly — #1698) when:
   //   - empty/whitespace input (`model === ''`), or
