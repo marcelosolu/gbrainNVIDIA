@@ -536,9 +536,9 @@ OAuth source scoping only guards the HTTP MCP path. If the brain's Postgres and 
 
 ## Part 13: Cost and speed expectations
 
-Real numbers from the published benchmark snapshot (2026-05-23, v0.40.6.0, measured on the ZeroEntropy embedding stack, which is deprecated with its hosted API ending 2026-09-04; the default Voyage `voyage-4` + `rerank-2.5` stack is in the same price and latency class):
+Real numbers from the published benchmark snapshot (2026-05-23, v0.40.6.0, measured on the ZeroEntropy embedding stack, which is deprecated with its hosted API ending 2026-09-04; the default NVIDIA `nv-embed-v1` stack is in the same latency class — check current pricing at https://build.nvidia.com):
 
-- **Embedding cost:** the default (`voyage:voyage-4`) is $0.06 per million tokens; the snapshot's ZeroEntropy stack is $0.05. For comparison, GBrain configured with OpenAI is $0.13.
+- **Embedding cost:** the default (`nvidia:nv-embed-v1`) is served through NVIDIA NIM (see current pricing at https://build.nvidia.com); the snapshot's ZeroEntropy stack is $0.05. For comparison, configured with OpenAI it's $0.13.
 - **Ingest speed:** about 22 seconds for a small test corpus of 164 pages on the host machine. For a 10K-page corpus, expect about 20 minutes the first time, then most syncs are incremental and finish in seconds.
 - **Query latency:** about 122 ms median for a `gbrain search`. For comparison, the same query through GBrain with OpenAI takes about 282 ms.
 - **Synthesized-answer latency:** a few seconds, dominated by the Anthropic API.
@@ -546,7 +546,7 @@ Real numbers from the published benchmark snapshot (2026-05-23, v0.40.6.0, measu
 
 Full methodology and per-run receipt JSONs live in [the gbrain-evals repo](https://github.com/garrytan/gbrain-evals/blob/main/docs/benchmarks/2026-05-23-v0.40.6.0-snapshot.md).
 
-For a 25-person company at sustained use, expect about $40 a month in embeddings (the default `voyage-4` at $0.06/million tokens), $50 a month in Anthropic calls for the synthesized-answer queries, plus your hosting bill. Under $100 a month for the AI side at most companies your size.
+For a 25-person company at sustained use, expect roughly $40 a month in embeddings (the default `nvidia:nv-embed-v1` via NVIDIA NIM — check [build.nvidia.com](https://build.nvidia.com) for current usage pricing), $50 a month in Anthropic calls for the synthesized-answer queries, plus your hosting bill. Under $100 a month for the AI side at most companies your size.
 
 ---
 

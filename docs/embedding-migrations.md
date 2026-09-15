@@ -13,7 +13,7 @@
 
 GBrain stores embeddings in a fixed-dimension `vector(N)` column on
 `content_chunks`. If you switch to a model with a different dimension
-(e.g. `openai:text-embedding-3-large` 1536 → `voyage:voyage-4` 1024, or
+(e.g. `openai:text-embedding-3-large` 1536 → `nvidia:nv-embed-v1` 1024, or
 `voyage:voyage-4-large` 2048), the on-disk column type doesn't change
 automatically.
 
@@ -76,7 +76,7 @@ single-command wrapper:
 
 ```bash
 gbrain reinit-pglite \
-  --embedding-model voyage:voyage-4 \
+  --embedding-model nvidia:nv-embed-v1 \
   --embedding-dimensions 1024
 ```
 
@@ -97,7 +97,7 @@ mv ~/.gbrain/brain.pglite ~/.gbrain/brain.pglite.bak
 #    every other field in ~/.gbrain/config.json (chat model,
 #    expansion model, API keys).
 gbrain init --pglite \
-  --embedding-model voyage:voyage-4 \
+  --embedding-model nvidia:nv-embed-v1 \
   --embedding-dimensions 1024
 
 # 3. Re-import your brain repo. `gbrain sync` reads the brain repo

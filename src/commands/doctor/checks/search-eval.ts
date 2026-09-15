@@ -10,44 +10,96 @@ import { loadConfig, type GBrainConfig } from '../../../core/config.ts';
 // Leaf module (no flag surface of its own) — see that file for why this
 // isn't imported from extract-conversation-facts.ts directly (#4135).
 import { ALLOWED_TYPES } from '../../../core/facts/conversation-types.ts';
+import { resolveRecipe } from '../../../core/ai/model-resolver.ts';
+import { isStrictOpenRouterFreeModelId } from '../../../core/model-id.ts';
 
-function hasNonEmptyChatFallbackChain(value: unknown): boolean {
+const MAX_CHAT_FALLBACK_CHAIN = 3;
+
+function parseChatFallbackChain(value: unknown): string[] | null {
   if (Array.isArray(value)) {
-    return value.some((entry) => typeof entry === 'string' && entry.trim().length > 0);
+    const chain = value.filter((entry): entry is string => typeof entry === 'string');
+    return chain.length > 0 ? chain : null;
   }
-  if (typeof value !== 'string' || value.trim().length === 0) return false;
-  try {
-    const parsed: unknown = JSON.parse(value);
-    if (Array.isArray(parsed)) {
-      return parsed.some((entry) => typeof entry === 'string' && entry.trim().length > 0);
+  if (typeof value !== 'string' || value.length === 0) return null;
+  const raw = value;
+  if (raw.trim().startsWith('[')) {
+    try {
+      const parsed: unknown = JSON.parse(raw);
+      if (!Array.isArray(parsed) || !parsed.every((entry) => typeof entry === 'string')) return null;
+      return parsed.length > 0 ? parsed : null;
+    } catch {
+      return null;
     }
-  } catch {
-    // `config set` stores raw strings; any non-empty non-JSON value is set.
   }
-  return true;
+  const chain = raw.split(',');
+  return chain.length > 0 ? chain : null;
 }
 
-/**
- * `chat_fallback_chain` is accepted by config and reaches the gateway config,
- * but no production chat path consumes it. Keep the warning in doctor rather
- * than config loading so ordinary commands stay quiet. Returning null for an
- * empty value keeps clean doctor reports silent instead of adding an OK line.
- */
-export async function checkChatFallbackChainInert(
+function isEmptyChatFallbackChain(value: unknown): boolean {
+  if (Array.isArray(value)) return value.length === 0;
+  if (typeof value !== 'string') return value == null;
+  return value.length === 0 || value.trim() === '[]';
+}
+
+function fallbackChainEntryIssue(entry: string): string | null {
+  if (entry !== entry.trim()) return 'contém espaços externos';
+  if (entry.startsWith('openrouter:') && entry.toLowerCase().endsWith(':free') && !isStrictOpenRouterFreeModelId(entry)) {
+    return 'rota OpenRouter :free malformada';
+  }
+  if (!entry.includes(':')) return 'sem provider explícito';
+  try {
+    const { recipe, parsed } = resolveRecipe(entry);
+    if (!recipe.touchpoints.chat) return `provider ${parsed.providerId} sem suporte a chat`;
+    return null;
+  } catch {
+    return 'provider/model desconhecido';
+  }
+}
+
+/** Validate the configured chat failover chain without exposing its contents. */
+export async function checkChatFallbackChain(
   engine: BrainEngine,
   effectiveConfig: Pick<GBrainConfig, 'chat_fallback_chain'> | null = loadConfig(),
 ): Promise<Check | null> {
-  const fileOrEnvSet = hasNonEmptyChatFallbackChain(effectiveConfig?.chat_fallback_chain);
-  const dbValue = await engine.getConfig('chat_fallback_chain').catch(() => null);
-  if (!fileOrEnvSet && !hasNonEmptyChatFallbackChain(dbValue)) return null;
-  return {
-    name: 'chat_fallback_chain_inert',
-    status: 'warn',
-    message:
-      '`chat_fallback_chain` is set but currently has no effect: no production chat path consumes it. ' +
-      'If you set it expecting fallback behavior, clear it from every plane that still holds a value: ' +
-      'the DB (`gbrain config unset chat_fallback_chain`), `~/.gbrain/config.json`, and `GBRAIN_CHAT_FALLBACK_CHAIN`.',
-  };
+  const fileChain = parseChatFallbackChain(effectiveConfig?.chat_fallback_chain);
+  const dbRaw = await engine.getConfig('chat_fallback_chain').catch(() => null);
+  const chain = fileChain ?? parseChatFallbackChain(dbRaw);
+  const effectiveRaw = fileChain !== null ? effectiveConfig?.chat_fallback_chain : dbRaw;
+  const configured = effectiveConfig?.chat_fallback_chain !== undefined || dbRaw !== null;
+  if (!configured || isEmptyChatFallbackChain(effectiveRaw)) return null;
+  if (!chain) {
+    return {
+      name: 'chat_fallback_chain',
+      status: 'warn',
+      message: '`chat_fallback_chain` está configurada, mas não contém uma lista válida de rotas.',
+    };
+  }
+  if (chain.length > MAX_CHAT_FALLBACK_CHAIN) {
+    return {
+      name: 'chat_fallback_chain',
+      status: 'warn',
+      message: `\`chat_fallback_chain\` excede o limite seguro de ${MAX_CHAT_FALLBACK_CHAIN} fallbacks; reduza a cadeia para limitar tentativas e custo.`,
+    };
+  }
+  const duplicate = chain.findIndex((entry, index) => chain.indexOf(entry) !== index);
+  if (duplicate >= 0) {
+    return {
+      name: 'chat_fallback_chain',
+      status: 'warn',
+      message: `\`chat_fallback_chain\` contém rota duplicada na entrada ${duplicate + 1}.`,
+    };
+  }
+  for (let index = 0; index < chain.length; index++) {
+    const issue = fallbackChainEntryIssue(chain[index]!);
+    if (issue) {
+      return {
+        name: 'chat_fallback_chain',
+        status: 'warn',
+        message: `\`chat_fallback_chain\` tem uma rota inválida na entrada ${index + 1}: ${issue}.`,
+      };
+    }
+  }
+  return null;
 }
 
 /**

@@ -239,3 +239,28 @@ describe('every hosted google recipe model has a pricing entry', () => {
     expect(missing).toEqual([]);
   });
 });
+
+describe('gbrainNVIDIA fork — NVIDIA embedding routes price at $0', () => {
+  // Without a row, an embed-kind budget reserve under any --max-cost cap
+  // hard-fails no_pricing on the fork's default embedding model.
+  test.each([
+    ['nvidia:nv-embed-v1', 'nvidia:nv-embed-v1'],
+    ['nvidia:nvidia/nemotron-3-embed-1b', 'nvidia:nemotron-3-embed-1b'],
+  ])('%s is known at $0 via key %s', (model, key) => {
+    const r = lookupEmbeddingPrice(model);
+    expect(r.kind).toBe('known');
+    if (r.kind === 'known') {
+      expect(r.pricePerMTok).toBe(0);
+      expect(r.key).toBe(key);
+    }
+  });
+
+  test('the $0 row actually reaches the budget tracker (embed kind)', async () => {
+    const { BudgetTracker } = await import('../src/core/budget/budget-tracker.ts');
+    const t = new BudgetTracker({ maxCostUsd: 5, label: 'test' });
+    // reserve() throws no_pricing on an unknown embed route; it must not on
+    // the fork's default embedding model.
+    expect(() => t.reserve({ modelId: 'nvidia:nvidia/nemotron-3-embed-1b', estimatedInputTokens: 1000, maxOutputTokens: 0, kind: 'embed' })).not.toThrow();
+    expect(t.totalSpent).toBe(0);
+  });
+});
