@@ -20,7 +20,7 @@ import type { BrainEngine } from '../../src/core/engine.ts';
 import { getSessionContextState, upsertSessionContextState } from '../../src/core/context/session-state.ts';
 import { linkEntityIdentity, listEntityIdentities } from '../../src/core/entity-identity.ts';
 import { buildEntityCard } from '../../src/core/verbs/entity-card.ts';
-import { hasDatabase, setupDB, teardownDB, getEngine } from './helpers.ts';
+import { hasDatabase, setupDB, setupLegacyEmbeddingDB, teardownDB, getEngine } from './helpers.ts';
 import { TRAVERSE_PATH_ROW_CAP } from '../../src/core/engine-constants.ts';
 import { DENSE_HUB_SLUG, DENSE_HUB_SPOKES, seedDenseHub } from '../helpers/dense-hub.ts';
 
@@ -115,7 +115,7 @@ describeBoth('Engine parity — Postgres vs PGLite', () => {
   let pgliteEngine: PGLiteEngine;
 
   beforeAll(async () => {
-    pgEngine = await setupDB();
+    pgEngine = await setupLegacyEmbeddingDB();
     await seedEngine(pgEngine);
 
     pgliteEngine = new PGLiteEngine();
@@ -1305,7 +1305,7 @@ describeBoth('Engine parity — relationalFanout', () => {
   let pgliteEngine: PGLiteEngine;
 
   beforeAll(async () => {
-    pgEngine = await setupDB();
+    pgEngine = await setupLegacyEmbeddingDB();
     await seedRelational(pgEngine);
     pgliteEngine = new PGLiteEngine();
     await pgliteEngine.connect({});
@@ -1838,7 +1838,7 @@ describeBoth('Engine parity — CJK keyword fallback (#3986)', () => {
   }
 
   beforeAll(async () => {
-    pgEngine = await setupDB();
+    pgEngine = await setupLegacyEmbeddingDB();
     await seedCJK(pgEngine);
     pgliteEngine = new PGLiteEngine();
     await pgliteEngine.connect({});
@@ -2351,7 +2351,7 @@ describeBoth('Engine parity — facts TTL read-time validity (WP5)', () => {
   let pgliteEngine: PGLiteEngine;
 
   beforeAll(async () => {
-    pgEngine = await setupDB();
+    pgEngine = await setupLegacyEmbeddingDB();
     pgliteEngine = new PGLiteEngine();
     await pgliteEngine.connect({});
     await pgliteEngine.initSchema();
@@ -2516,6 +2516,60 @@ describeBoth('Engine parity — getCalleesOf bare-name fallback (#4670)', () => 
       expect(await eng.getCalleesOf('Other.SubmitAsync', { allSources: true, bareFallback: true })).toHaveLength(0);
       expect(await eng.getCalleesOf('Submit_sync', { allSources: true, bareFallback: true })).toHaveLength(0);
       expect(await eng.getCalleesOf('SubmitAsync', { sourceId: 'not-a-source', bareFallback: true })).toHaveLength(0);
+    }
+  });
+});
+
+// getRawData soft-delete filter. Companion to the #4587 soft-delete blocks
+// above, but NOT behind describeBoth: the PGLite arm always runs (so the
+// filter is exercised in every sandbox) and the Postgres arm joins when
+// DATABASE_URL is configured (CI docker Postgres).
+describe('getRawData soft-delete filter — parity (PGLite always; Postgres when DATABASE_URL is set)', () => {
+  let pglite: PGLiteEngine;
+  const arms: Array<{ name: string; eng: BrainEngine }> = [];
+
+  beforeAll(async () => {
+    pglite = new PGLiteEngine();
+    await pglite.connect({});
+    await pglite.initSchema();
+    arms.push({ name: 'pglite', eng: pglite });
+    if (!SKIP_PG) arms.push({ name: 'postgres', eng: await setupDB() });
+  }, 90_000);
+
+  afterAll(async () => {
+    await pglite.disconnect();
+    if (!SKIP_PG) await teardownDB();
+  }, 30_000);
+
+  test('putRawData → softDeletePage hides raw_data on every read shape; includeDeleted:true still returns it; restorePage makes it visible again', async () => {
+    expect(arms.length).toBeGreaterThan(0);
+    for (const { name, eng } of arms) {
+      const slug = 'wiki/raw-soft-delete';
+      await eng.putPage(slug, { type: 'note', title: 'raw', compiled_truth: 'body', timeline: '' }, { sourceId: 'default' });
+      await eng.putRawData(slug, 'transcript:test', { k: 'v' }, { sourceId: 'default' });
+      expect((await eng.getRawData(slug, undefined, { sourceId: 'default' })).length).toBe(1);
+
+      expect(await eng.softDeletePage(slug, { sourceId: 'default' })).not.toBeNull();
+      // Every WHERE shape (unscoped, scalar source, federated sourceIds,
+      // with/without a raw source filter) hides the soft-deleted page.
+      const hidden = [
+        await eng.getRawData(slug),
+        await eng.getRawData(slug, 'transcript:test'),
+        await eng.getRawData(slug, undefined, { sourceId: 'default' }),
+        await eng.getRawData(slug, 'transcript:test', { sourceId: 'default' }),
+        await eng.getRawData(slug, undefined, { sourceIds: ['default'] }),
+        await eng.getRawData(slug, 'transcript:test', { sourceIds: ['default'] }),
+      ];
+      for (const rows of hidden) expect({ arm: name, rows }).toEqual({ arm: name, rows: [] });
+
+      // Explicit opt-in (export / engine migration / ingest healing) still sees it.
+      expect((await eng.getRawData(slug, undefined, { sourceId: 'default', includeDeleted: true })).length).toBe(1);
+      expect((await eng.getRawData(slug, 'transcript:test', { sourceIds: ['default'], includeDeleted: true })).length).toBe(1);
+      expect((await eng.getRawData(slug, undefined, { includeDeleted: true })).length).toBe(1);
+
+      expect(await eng.restorePage(slug, { sourceId: 'default' })).toBe(true);
+      expect((await eng.getRawData(slug, undefined, { sourceId: 'default' })).length).toBe(1);
+      await eng.deletePage(slug, { sourceId: 'default' });
     }
   });
 });

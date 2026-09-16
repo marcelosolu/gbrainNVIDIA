@@ -111,4 +111,3 @@ describe('parseAtomsOutcome — adversarial fixtures for the zero-yield recovery
     expect(parseAtomsOutcome('nothing to extract {}').ok).toBe(false);
   });
 });
-

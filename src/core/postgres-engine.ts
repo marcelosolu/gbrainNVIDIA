@@ -58,6 +58,7 @@ import {
   EmbeddingColumnNotRegisteredError,
 } from './search/embedding-column.ts';
 import { getFtsLanguage, applyFtsLanguagePolicy } from './fts-language.ts';
+import { splitEmbeddingSignature, currentSpaceChunkPredicate } from './embedding-invalidation.ts';
 import { SAFE_FENCE_CHUNKER_VERSION, bodyWriteChunkVersion, chunkWriteInvalidation, requiresSafeChunks, safeChunksFilter } from './search/safe-chunks.ts';
 import type {
   Page, PageInput, PageFilters, PageType,
@@ -2642,14 +2643,9 @@ export class PostgresEngine implements BrainEngine {
   }
 
   async invalidateStaleSignatureEmbeddings(opts: { signature: string; sourceId?: string; includeNullSignature?: boolean }): Promise<number> {
-    // NULL embeddings whose page signature is set AND differs from current.
-    // GRANDFATHER: NULL signature untouched — UNLESS includeNullSignature
-    // (#3391): provider migrations must not leave pre-stamp pages in the old
-    // embedding space. Feeds the NULL-embedding cursor so listStaleChunks
-    // stays unchanged. RETURNING → row count. S2: keyed on the registry-
-    // ACTIVE column (loud resolver failure — destructive writes never guess).
     const colId = await this.activeEmbeddingColId();
-    const params: unknown[] = [opts.signature];
+    const { model, dims } = splitEmbeddingSignature(opts.signature);
+    const params: unknown[] = [opts.signature, model, dims];
     let srcClause = '';
     if (opts.sourceId !== undefined) {
       params.push(opts.sourceId);
@@ -2665,6 +2661,7 @@ export class PostgresEngine implements BrainEngine {
          FROM pages p
         WHERE cc.page_id = p.id
           AND cc.${colId} IS NOT NULL
+          AND NOT ${currentSpaceChunkPredicate(colId, 2, 3)}
           AND ${sigClause}${srcClause}
         RETURNING cc.page_id`,
       params as Parameters<typeof this.sql.unsafe>[1],
@@ -4194,36 +4191,37 @@ export class PostgresEngine implements BrainEngine {
   async getRawData(
     slug: string,
     source?: string,
-    opts?: { sourceId?: string; sourceIds?: string[]; excludePrivate?: boolean },
+    opts?: PageReadScope & { includeDeleted?: boolean },
   ): Promise<RawData[]> {
     const sql = this.sql;
     const privacy = opts?.excludePrivate ? sql.unsafe(`AND ${privatePagesFilterFragment('p')}`) : sql``;
+    const alive = opts?.includeDeleted ? sql`` : sql`AND p.deleted_at IS NULL`; // raw_data follows the page soft-delete
     const sourceIds = opts?.sourceIds && opts.sourceIds.length > 0 ? opts.sourceIds : undefined;
     const sourceId = sourceIds ? undefined : opts?.sourceId;
     let rows;
     if (source && sourceIds) {
       rows = await sql`SELECT rd.source, rd.data, rd.fetched_at FROM raw_data rd
-        JOIN pages p ON p.id = rd.page_id ${privacy}
+        JOIN pages p ON p.id = rd.page_id ${privacy} ${alive}
         WHERE p.slug = ${slug} AND rd.source = ${source} AND p.source_id = ANY(${sourceIds}::text[])`;
     } else if (sourceIds) {
       rows = await sql`SELECT rd.source, rd.data, rd.fetched_at FROM raw_data rd
-        JOIN pages p ON p.id = rd.page_id ${privacy}
+        JOIN pages p ON p.id = rd.page_id ${privacy} ${alive}
         WHERE p.slug = ${slug} AND p.source_id = ANY(${sourceIds}::text[])`;
     } else if (source && sourceId) {
       rows = await sql`SELECT rd.source, rd.data, rd.fetched_at FROM raw_data rd
-        JOIN pages p ON p.id = rd.page_id ${privacy}
+        JOIN pages p ON p.id = rd.page_id ${privacy} ${alive}
         WHERE p.slug = ${slug} AND rd.source = ${source} AND p.source_id = ${sourceId}`;
     } else if (source) {
       rows = await sql`SELECT rd.source, rd.data, rd.fetched_at FROM raw_data rd
-        JOIN pages p ON p.id = rd.page_id ${privacy}
+        JOIN pages p ON p.id = rd.page_id ${privacy} ${alive}
         WHERE p.slug = ${slug} AND rd.source = ${source}`;
     } else if (sourceId) {
       rows = await sql`SELECT rd.source, rd.data, rd.fetched_at FROM raw_data rd
-        JOIN pages p ON p.id = rd.page_id ${privacy}
+        JOIN pages p ON p.id = rd.page_id ${privacy} ${alive}
         WHERE p.slug = ${slug} AND p.source_id = ${sourceId}`;
     } else {
       rows = await sql`SELECT rd.source, rd.data, rd.fetched_at FROM raw_data rd
-        JOIN pages p ON p.id = rd.page_id ${privacy}
+        JOIN pages p ON p.id = rd.page_id ${privacy} ${alive}
         WHERE p.slug = ${slug}`;
     }
     return rows as unknown as RawData[];

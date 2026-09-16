@@ -9,7 +9,7 @@ For the link-only index, see `llms.txt`. Source of truth: https://github.com/gar
 
 ## docs/guides/grok-bot.md
 
-Source: https://raw.githubusercontent.com/marcelosolu/gbrainNVIDIA/docs/guides/grok-bot.md
+Source: https://raw.githubusercontent.com/marcelosolu/gbrainNVIDIA/main/docs/guides/grok-bot.md
 
 # GBrain for Grok Bot
 
@@ -155,7 +155,7 @@ network and OAuth failures belong to the
 
 ## docs/guides/muse.md
 
-Source: https://raw.githubusercontent.com/marcelosolu/gbrainNVIDIA/docs/guides/muse.md
+Source: https://raw.githubusercontent.com/marcelosolu/gbrainNVIDIA/main/docs/guides/muse.md
 
 # GBrain for Muse
 
@@ -316,7 +316,7 @@ old path. More errors and fixes are in the
 
 ## docs/guides/in-agent-setup.md
 
-Source: https://raw.githubusercontent.com/marcelosolu/gbrainNVIDIA/docs/guides/in-agent-setup.md
+Source: https://raw.githubusercontent.com/marcelosolu/gbrainNVIDIA/main/docs/guides/in-agent-setup.md
 
 # Install GBrain inside a personal agent
 
@@ -633,7 +633,7 @@ policies. Those remain app-level acceptance checks in the product guides.
 
 ## docs/guides/hosted-harness-access.md
 
-Source: https://raw.githubusercontent.com/marcelosolu/gbrainNVIDIA/docs/guides/hosted-harness-access.md
+Source: https://raw.githubusercontent.com/marcelosolu/gbrainNVIDIA/main/docs/guides/hosted-harness-access.md
 
 # Connect your agent to an existing hosted GBrain
 
@@ -811,7 +811,7 @@ As of **2026-09-09**, repository tests exercise private configuration writers, c
 
 ## AGENTS.md
 
-Source: https://raw.githubusercontent.com/marcelosolu/gbrainNVIDIA/AGENTS.md
+Source: https://raw.githubusercontent.com/marcelosolu/gbrainNVIDIA/main/AGENTS.md
 
 # Agents working on GBrain
 
@@ -914,9 +914,10 @@ writing or reviewing an operation, consult `src/core/operations.ts` for the cont
 - **Drive the brain to a target health score:** the one-command
   loop. `gbrain doctor --remediation-plan --json` previews what would be
   fixed; `gbrain doctor --remediate --yes --target-score 90 --max-usd 5`
-  walks a dependency-ordered plan (sync before extract, embed after
-  consolidate), re-checking score between every step, refusing to spend
-  past the cost cap. Empty brains (no entity pages) or unconfigured embedding
+  walks a dependency-ordered plan, re-checking score between every step and
+  refusing to spend past the cost cap. Stale extraction uses source-scoped
+  database pages, including DB-only pages; it does not require a repository
+  sync first. Empty brains (no entity pages) or unconfigured embedding
   keys hit a `max_reachable_score` ceiling and bail with what's missing.
   Three phase handlers (synthesize / patterns / consolidate) are
   PROTECTED — only trusted local callers can submit them; MCP cannot.
@@ -980,7 +981,7 @@ publishing: `LLMS_REPO_BASE=https://raw.githubusercontent.com/your-org/your-fork
 
 ## CLAUDE.md
 
-Source: https://raw.githubusercontent.com/marcelosolu/gbrainNVIDIA/CLAUDE.md
+Source: https://raw.githubusercontent.com/marcelosolu/gbrainNVIDIA/main/CLAUDE.md
 
 # CLAUDE.md
 
@@ -1506,7 +1507,7 @@ ms, max waiters) for `--json`; a one-line summary prints to stderr.
 
 ## Build
 
-`bun build --compile --outfile bin/gbrain src/cli.ts`
+`bun build --compile --no-compile-autoload-bunfig --outfile bin/gbrain src/cli.ts`
 
 ## Version locations (single source of truth: `VERSION` file)
 
@@ -1946,7 +1947,7 @@ Key routing rules:
 
 ## INSTALL_FOR_AGENTS.md
 
-Source: https://raw.githubusercontent.com/marcelosolu/gbrainNVIDIA/INSTALL_FOR_AGENTS.md
+Source: https://raw.githubusercontent.com/marcelosolu/gbrainNVIDIA/main/INSTALL_FOR_AGENTS.md
 
 # GBrain Installation Guide for AI Agents
 
@@ -2465,7 +2466,7 @@ Init + upgrade banners auto-skip in non-TTY too.
 
 ## skills/RESOLVER.md
 
-Source: https://raw.githubusercontent.com/marcelosolu/gbrainNVIDIA/skills/RESOLVER.md
+Source: https://raw.githubusercontent.com/marcelosolu/gbrainNVIDIA/main/skills/RESOLVER.md
 
 # GBrain Skill Resolver
 
@@ -2651,7 +2652,7 @@ These apply to ALL brain-writing skills:
 
 ## README.md
 
-Source: https://raw.githubusercontent.com/marcelosolu/gbrainNVIDIA/README.md
+Source: https://raw.githubusercontent.com/marcelosolu/gbrainNVIDIA/main/README.md
 
 # gbrainNVIDIA
 
@@ -2919,7 +2920,7 @@ echo "from a pipe" | gbrain capture --stdin
 SLUG=$(gbrain capture "..." --quiet)
 ```
 
-The page lands in the database and on disk in one move. Default slug `inbox/YYYY-MM-DD-<hash8>` so captures cluster in a predictable triage location. On thin-client installs the verb routes through MCP to the server: same command, same UX.
+For a file-backed source, the page is saved to the database and canonical Markdown before optional embedding. Ordinary file-write failures roll back the database revision; this is not a crash-atomic transaction across files and the database. A source without a configured repository can hold DB-only pages, which need a database backup. See the [persistence boundary](docs/architecture/system-of-record.md#page-write-persistence-boundary). Default slug `inbox/YYYY-MM-DD-<hash8>` so captures cluster in a predictable triage location. On thin-client installs the verb routes through MCP to the server.
 
 **Say to your agent:** *"Remember this: ..."* — *"Save this thought to my brain"* — *"Capture this."* And to fill an empty brain from your existing life: *"Fill my brain"* (the cold-start skill walks your email, calendar, contacts, and archives one consented step at a time).
 
@@ -2960,10 +2961,14 @@ How the open-loop engine decides who's waiting: [`docs/guides/open-loops.md`](do
 Your other agents' histories import in one command. `gbrain transcripts ingest`
 parses agent session logs (Claude Code, Codex, OpenClaw, Hermes, Grok Build) and extracted
 consumer chat exports (ChatGPT / Claude.ai `conversations.json`) into readable
-conversation pages with provenance back to the exact session file. Secrets are
-scrubbed from message bodies, titles, speakers, and session metadata before
-anything is written, embedding is off by default for bulk backfills, and
-re-runs are free — unchanged sessions skip on content hash:
+conversation pages with provenance back to the exact session file. Pattern-based redaction runs over message bodies, titles, speakers, and session
+metadata before anything is written — vendor key prefixes, JWTs, cloud/API key
+shapes, `Bearer` headers, connection-string credentials, and high-entropy
+`KEY=`/`TOKEN=` assignments become `<REDACTED:…>` placeholders (preview with
+`--dry-run`; no pattern set is complete, so if a secret still lands see
+["If a secret reached the brain"](SECURITY.md#if-a-secret-reached-the-brain):
+rotate it, then `gbrain delete <slug> --purge`). Embedding is off by default
+for bulk backfills, and re-runs are free — unchanged sessions skip on content hash:
 
 ```bash
 gbrain transcripts ingest                    # discover importable session logs
@@ -3049,7 +3054,7 @@ Want to see a tutorial that isn't here yet? [Open an issue](https://github.com/g
 
 - **Signal detector**, after you opt in, captures durable ideas and entity mentions from substantive messages. Explicit remembering works without automatic capture; paid enrichment is a separate choice.
 - **Brain-first lookup** before any external API call. The cheapest, fastest, most personal information source you have.
-- **Auto-link** fires on every page write. No LLM calls; pure pattern matching on `[[wiki/people/bob]]` style references. New entity → new page stub → graph grows.
+- **Auto-link** extracts graph links for trusted local page writes. No LLM calls; pure pattern matching on page references such as `[[people/alice-example]]`. Unresolved extracted facts keep their provenance without inventing a backing page.
 - **Cron-driven enrichment** runs while you sleep: dedup people pages, fix citations, score salience, find contradictions, prep tomorrow's tasks.
 
 The whole loop is described in [`docs/architecture/topologies.md`](docs/architecture/topologies.md) with diagrams.
@@ -3184,7 +3189,7 @@ flowchart LR
 
 **Two engines, one contract.** PGLite (Postgres 17 via WASM, zero-config, default) for personal brains up to ~50K pages. Postgres + pgvector (Supabase or self-hosted) for shared / large / multi-machine deployments. The contract-first `BrainEngine` interface in [`src/core/engine.ts`](src/core/engine.ts) defines the 140+ methods both engines implement; CLI and MCP server are generated from one source.
 
-**Brain repo is the system of record.** Your knowledge lives in a regular git repo (your "brain repo") as markdown files. GBrain syncs the repo into Postgres for retrieval; deletes in git become soft-deletes in DB. You can publish public subsets, share team mounts, run thin-client setups pointing at a colleague's brain server. Topologies in [`docs/architecture/topologies.md`](docs/architecture/topologies.md).
+**Canonical files preserve file-backed knowledge.** Your brain repo holds Markdown that GBrain indexes for retrieval; deletes in git become soft-deletes in the database. DB-only pages, unresolved facts, revision history, and operational state need a separate database backup. See the [system-of-record contract](docs/architecture/system-of-record.md). You can publish public subsets, share team mounts, and run thin-client setups pointing at a colleague's brain server. Topologies in [`docs/architecture/topologies.md`](docs/architecture/topologies.md).
 
 **Two organizational axes (brain ⊥ source).** A *brain* is a database (your personal brain, a team mount you joined). A *source* is a repo inside that brain (wiki, gstack, an essay, a knowledge base). Routing lives in `.gbrain-source` dotfiles and resolves via a documented 6-tier precedence chain. Full diagrams in [`docs/architecture/brains-and-sources.md`](docs/architecture/brains-and-sources.md).
 
@@ -3355,7 +3360,7 @@ Community PR contributors are credited in `CHANGELOG.md` per release. ZeroEntrop
 
 ## docs/ENGINES.md
 
-Source: https://raw.githubusercontent.com/marcelosolu/gbrainNVIDIA/docs/ENGINES.md
+Source: https://raw.githubusercontent.com/marcelosolu/gbrainNVIDIA/main/docs/ENGINES.md
 
 # Pluggable Engine Architecture
 
@@ -3663,7 +3668,10 @@ cwd-.env guard (gbrain never adopts a `DATABASE_URL` that Bun auto-loaded
 from the working directory's `.env` family: `.env`, `.env.local`, and the
 `.env.<NODE_ENV>` / `.env.<NODE_ENV>.local` variants for `development`,
 `production` and `test`; with the precedence note when both `GBRAIN_DATABASE_URL` and
-`DATABASE_URL` are set), redacted URLs only, and — on Postgres — a
+`DATABASE_URL` are set — this `DATABASE_URL` guard matches the file's VALUE; the
+security-relevant `GBRAIN_*` variables get the stricter key-presence quarantine
+described under "Environment variables and cwd `.env` files" in `SECURITY.md`),
+redacted URLs only, and — on Postgres — a
 zero-round-trip pooler block (Supabase pooler detection, prepared-statement
 resolution, pool sizes, direct/session-pooler derivability). `--brain <id>`
 resolves a mounted brain and reports the MOUNT's engine and URL source, never
@@ -3872,7 +3880,7 @@ Note: there is no SQLite engine. PGLite uses the same SQL as Postgres, so no sep
 
 ## docs/what-schemas-unlock.md
 
-Source: https://raw.githubusercontent.com/marcelosolu/gbrainNVIDIA/docs/what-schemas-unlock.md
+Source: https://raw.githubusercontent.com/marcelosolu/gbrainNVIDIA/main/docs/what-schemas-unlock.md
 
 # What schemas unlock
 
@@ -4052,7 +4060,7 @@ That's what we built. Try it on a corpus you actually have and the numbers go up
 
 ## docs/schema-author-tutorial.md
 
-Source: https://raw.githubusercontent.com/marcelosolu/gbrainNVIDIA/docs/schema-author-tutorial.md
+Source: https://raw.githubusercontent.com/marcelosolu/gbrainNVIDIA/main/docs/schema-author-tutorial.md
 
 # Tutorial: Build your first schema pack
 
@@ -4281,7 +4289,7 @@ gbrain schema lint --with-db
 
 ## docs/guides/live-sync.md
 
-Source: https://raw.githubusercontent.com/marcelosolu/gbrainNVIDIA/docs/guides/live-sync.md
+Source: https://raw.githubusercontent.com/marcelosolu/gbrainNVIDIA/main/docs/guides/live-sync.md
 
 # Live Sync: Keep the Index Current
 
@@ -4528,7 +4536,7 @@ vars — incident-time escape hatches, not everyday knobs.
 
 ## docs/guides/cron-schedule.md
 
-Source: https://raw.githubusercontent.com/marcelosolu/gbrainNVIDIA/docs/guides/cron-schedule.md
+Source: https://raw.githubusercontent.com/marcelosolu/gbrainNVIDIA/main/docs/guides/cron-schedule.md
 
 # Reference Cron Schedule
 
@@ -4886,7 +4894,7 @@ echo "Dream cycle complete at $(date)"
 
 ## docs/guides/quiet-hours.md
 
-Source: https://raw.githubusercontent.com/marcelosolu/gbrainNVIDIA/docs/guides/quiet-hours.md
+Source: https://raw.githubusercontent.com/marcelosolu/gbrainNVIDIA/main/docs/guides/quiet-hours.md
 
 # Quiet Hours and Timezone-Aware Delivery
 
@@ -5089,7 +5097,7 @@ Set `enabled: false` to disable quiet hours entirely (e.g., for 24/7 monitoring)
 
 ## docs/guides/scaling-skills.md
 
-Source: https://raw.githubusercontent.com/marcelosolu/gbrainNVIDIA/docs/guides/scaling-skills.md
+Source: https://raw.githubusercontent.com/marcelosolu/gbrainNVIDIA/main/docs/guides/scaling-skills.md
 
 # Scaling skills past 300 without drowning the context window
 
@@ -5432,7 +5440,7 @@ the bundled resolver lives at [`skills/RESOLVER.md`](../../skills/RESOLVER.md).
 
 ## docs/guides/push-context.md
 
-Source: https://raw.githubusercontent.com/marcelosolu/gbrainNVIDIA/docs/guides/push-context.md
+Source: https://raw.githubusercontent.com/marcelosolu/gbrainNVIDIA/main/docs/guides/push-context.md
 
 # Push-based context
 
@@ -5587,7 +5595,7 @@ never reach a prompt regardless of caller trust.
 
 ## docs/guides/github-source.md
 
-Source: https://raw.githubusercontent.com/marcelosolu/gbrainNVIDIA/docs/guides/github-source.md
+Source: https://raw.githubusercontent.com/marcelosolu/gbrainNVIDIA/main/docs/guides/github-source.md
 
 # GitHub source kind: issues and PRs live in the brain
 
@@ -5753,7 +5761,7 @@ gbrain sources remove gh --confirm-destructive
 
 ## docs/mcp/DEPLOY.md
 
-Source: https://raw.githubusercontent.com/marcelosolu/gbrainNVIDIA/docs/mcp/DEPLOY.md
+Source: https://raw.githubusercontent.com/marcelosolu/gbrainNVIDIA/main/docs/mcp/DEPLOY.md
 
 # Deploy GBrain Remote MCP Server
 
@@ -5776,6 +5784,26 @@ Authorization-code connections require owner approval in the admin dashboard.
 Existing sessions are preserved. Before upgrading an installation with queued
 work, follow the [authorization and worker upgrade guide](../guides/authorization-upgrade.md)
 for the coordinated cutover, consent recovery, and Bun requirements.
+
+**The owner-approval step.** `/authorize` never returns an authorization code
+on its own. It records a pending request and redirects the browser to the admin
+dashboard (`/admin/?oauth_request=…`), where the brain owner signs in (bootstrap
+token or magic link), reviews the client name, redirect URI and requested
+scopes, and approves or denies. Only an approval mints the code, which is then
+delivered to the client's registered redirect URI; a denial returns
+`error=access_denied`. This applies to every authorization-code client,
+including clients that self-registered via DCR — self-registration alone never
+yields a token. Pending requests expire after ten minutes, do not survive a
+server restart, and are bounded: at most ten awaiting-decision requests per
+client and a fixed server-wide ceiling. Beyond either, `/authorize` sends the
+client back to its registered redirect URI with `error=too_many_requests`
+(and no code) until earlier requests are decided or expire; a `429` status on
+`/authorize` comes only from the MCP SDK's per-IP rate limit.
+
+**Say to your agent:** *"Start the brain server over HTTP with self-service
+registration, then approve my client in the admin dashboard — your agent runs
+`gbrain serve --http --enable-dcr` and you finish the connection by approving
+it at `/admin/`."*
 
 ## Three Paths
 
@@ -5967,6 +5995,40 @@ await oauthProvider.registerClientManual(
 
 For self-service client registration (Dynamic Client Registration, RFC 7591),
 start the server with `--enable-dcr`. DCR is off by default.
+
+**Say to your agent:** *"Start my brain's MCP server with self-service client
+registration — your agent runs `gbrain serve --http --enable-dcr`, and you
+approve each new connection in the admin UI."*
+
+A self-registered client goes through three gates:
+
+1. **Scope ceiling at registration.** Dynamic registration may request at most
+   `read write`. A request naming `admin`, `sources_admin`, `users_admin`, or
+   `agent` is rejected with HTTP 400 `invalid_client_metadata` (never silently
+   narrowed), and the error text points at the operator path. Under
+   `--enable-dcr-insecure`, a `client_credentials` registration is capped at
+   `read` — a grant that skips owner approval never carries `write`. While
+   DCR is enabled (either mode), OAuth discovery advertises the `read write`
+   self-registration ceiling as `scopes_supported` (authorization-server and
+   protected-resource metadata alike), so a client that registers with the
+   advertised scopes succeeds;
+   with DCR off, discovery lists every scope an operator-registered client
+   may hold. `agent` is never advertised — it needs delegation bindings no
+   OAuth request can carry.
+2. **Owner approval on `/authorize`.** Every authorization-code connection
+   redirects to the admin dashboard, where you see the client, its redirect
+   URI, and the requested scopes, and approve or deny. No code is minted
+   until you approve. Consent never widens the registered scope.
+3. **Per-request clamp.** Issued codes and tokens are re-intersected with the
+   client's current registered scope, so a later `rescope-client` takes effect
+   on the next request.
+
+To give a self-registered client more than `read write`, widen it yourself
+after the fact — `gbrain auth rescope-client <client_id> --scopes read,write,sources_admin`
+(or the admin dashboard's Agents page) — or pre-register it with
+`gbrain auth register-client` / the admin API, which accept every scope.
+`gbrain doctor` warns about active clients that hold a privileged scope but
+look self-registered.
 
 Native MCP clients register cleanly: `redirect_uris` may use an app custom
 scheme (RFC 8252, e.g. `myapp://callback`) or `http://` loopback alongside
@@ -6295,7 +6357,7 @@ built-in server is the recommended path.
 
 ## docs/protocol/MEMORY_VERBS_v1.md
 
-Source: https://raw.githubusercontent.com/marcelosolu/gbrainNVIDIA/docs/protocol/MEMORY_VERBS_v1.md
+Source: https://raw.githubusercontent.com/marcelosolu/gbrainNVIDIA/main/docs/protocol/MEMORY_VERBS_v1.md
 
 # MEMORY_VERBS v1 — the memory wire protocol
 
@@ -6735,7 +6797,7 @@ dominates (~minutes); the measured calls report p50/p99 + the ratio guard.
 
 ## docs/GBRAIN_VERIFY.md
 
-Source: https://raw.githubusercontent.com/marcelosolu/gbrainNVIDIA/docs/GBRAIN_VERIFY.md
+Source: https://raw.githubusercontent.com/marcelosolu/gbrainNVIDIA/main/docs/GBRAIN_VERIFY.md
 
 # GBrain Installation Verification Runbook
 
@@ -7091,7 +7153,7 @@ end-to-end sync test (4c), push a real change and verify it appears in search.
 
 ## docs/guides/minions-fix.md
 
-Source: https://raw.githubusercontent.com/marcelosolu/gbrainNVIDIA/docs/guides/minions-fix.md
+Source: https://raw.githubusercontent.com/marcelosolu/gbrainNVIDIA/main/docs/guides/minions-fix.md
 
 # Minions fix: repairing a half-migrated install
 
@@ -7223,7 +7285,7 @@ Each phase is idempotent. Re-running is safe. Common failure modes:
 
 ## docs/integrations/reliability-repair.md
 
-Source: https://raw.githubusercontent.com/marcelosolu/gbrainNVIDIA/docs/integrations/reliability-repair.md
+Source: https://raw.githubusercontent.com/marcelosolu/gbrainNVIDIA/main/docs/integrations/reliability-repair.md
 
 # Reliability repair
 

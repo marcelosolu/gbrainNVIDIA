@@ -22,9 +22,9 @@ import { hasSourceFilesystemLock, withSourceFilesystemLock, assertSourceFilesyst
  * only does "row exists + repo is a real dir → render + atomic write".
  */
 
-import { existsSync, statSync, mkdirSync, writeFileSync, renameSync, unlinkSync, readdirSync } from 'fs';
+import { existsSync, statSync, mkdirSync, unlinkSync, readdirSync } from 'fs';
 import { basename, dirname, isAbsolute, join, relative, resolve } from 'path';
-import { randomBytes } from 'crypto';
+import { atomicWriteFileSync } from './atomic-write.ts';
 import type { BrainEngine } from './engine.ts';
 import { serializePageToMarkdown, resolvePageFilePath, resolveSourceLocalFilePath } from './markdown.ts';
 import { isWriteTargetContained, msysToNativePath } from './path-confine.ts';
@@ -282,6 +282,13 @@ function scannerSourcePath(scanRoot: string, filePath: string): string {
  * A NULL `source_path` means the page was born via put/capture and has no
  * file of record yet — the slug-derived path stays correct for those.
  *
+ * `opts.includeDeleted`: resolve from a soft-deleted row too. The default
+ * reads ACTIVE rows only (a tombstone must not steer a live write), but the
+ * purge remediation path in `delete_page` retries the artifact removal for a
+ * TOMBSTONE — whose recorded `source_path` the active-row read would miss,
+ * falling back to the slug-derived twin and reporting a clean
+ * `file_not_present` while the real file survives for sync to resurrect.
+ *
  * Shared by `writePageThrough` AND the facts fence writer (#4204): the fence
  * appends to the page's file, so both writers MUST compute the identical
  * path or the fence lands in a file sync never reads back and the next
@@ -291,6 +298,7 @@ export async function resolvePageWriteTarget(
   engine: BrainEngine,
   slug: string,
   sourceId: string,
+  opts: { includeDeleted?: boolean } = {},
 ): Promise<PageWriteTarget> {
   let filePath: string;
   let writeRoot: string;
@@ -307,7 +315,7 @@ export async function resolvePageWriteTarget(
   const sourceLocalPath = rawLocalPath ? msysToNativePath(rawLocalPath) : null;
 
   const pathRows = await engine.executeRaw<{ source_path: string | null; source_uri: string | null }>(
-    `SELECT source_path, source_uri FROM pages WHERE source_id = $1 AND slug = $2 AND deleted_at IS NULL LIMIT 1`,
+    `SELECT source_path, source_uri FROM pages WHERE source_id = $1 AND slug = $2${opts.includeDeleted ? '' : ' AND deleted_at IS NULL'} LIMIT 1`,
     [sourceId, slug],
   );
   const recordedPath = sanitizeRecordedSourcePath(pathRows[0]?.source_path);
@@ -364,8 +372,8 @@ export async function resolvePageWriteTarget(
 /**
  * Render the DB row for `slug` to markdown and atomically write it under
  * `sync.repo_path`. Never throws — failures are reported via the result's
- * `skipped` / `error` fields (the DB write is the durable sink; the file is
- * best-effort and reconciled by the next `gbrain sync`).
+ * `skipped` / `error` fields. put_page calls it before its transaction commits
+ * and rejects non-deliberate skips so a file failure rolls back the DB write.
  */
 export async function writePageThrough(
   engine: BrainEngine,
@@ -432,42 +440,17 @@ export async function writePageThrough(
     assertSourceFilesystemActive();
     if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
 
-    // Atomic write: unique temp sibling + rename. Unique name (pid + random)
-    // so two concurrent saves to the same target can't clobber each other's
-    // temp file. Clean up the temp on any failure so we never leak a stray
-    // `.tmp` next to the real file.
-    const tmpPath = `${filePath}.tmp.${process.pid}.${randomBytes(4).toString('hex')}`;
-    try {
-      writeFileSync(tmpPath, md, 'utf8');
-      renameSync(tmpPath, filePath);
-    } catch (writeErr) {
-      try {
-        if (existsSync(tmpPath)) unlinkSync(tmpPath);
-      } catch {
-        // best-effort cleanup; surface the original write error below
-      }
-      throw writeErr;
-    }
-
-    // #4247: a page born via put/capture/reverse-write keeps source_path=NULL
-    // forever — mtime-watermark incremental sync never rescans an untouched
-    // file — so bind the just-materialized file of record now. NULL-guarded so
-    // a scanner-recorded path is never rewritten; best-effort because row and
-    // file are already durable and a full sync can still heal the bookkeeping.
-    try {
-      await engine.executeRaw(
-        `UPDATE pages
-            SET source_path = $1
-          WHERE source_id = $2
-            AND slug = $3
-            AND deleted_at IS NULL
-            AND source_path IS NULL`,
-        [sourcePathToBind, sourceId, slug],
-      );
-    } catch (bindErr) {
-      const msg = bindErr instanceof Error ? bindErr.message : String(bindErr);
-      opts.logger?.warn(`[write-through] wrote ${slug} but could not bind source_path: ${msg}`);
-    }
+    await engine.executeRaw(
+      `UPDATE pages
+          SET source_path = $1
+        WHERE source_id = $2
+          AND slug = $3
+          AND deleted_at IS NULL
+          AND source_path IS NULL`,
+      [sourcePathToBind, sourceId, slug],
+    );
+    assertSourceFilesystemActive();
+    atomicWriteFileSync(filePath, md, { verify: () => assertSourceFilesystemActive() });
 
     // #2426: on a durability-hardened repo (user ran `gbrain sources harden`),
     // commit the artifact so it reaches git — pre-fix, write-through content
