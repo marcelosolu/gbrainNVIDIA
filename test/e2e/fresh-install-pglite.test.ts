@@ -79,10 +79,13 @@ describe('E2E: fresh gbrain init --pglite → import → embed works end-to-end'
     });
   });
 
-  test('bare `init --pglite`: schema sized to the new-install default (voyage-4/1024)', async () => {
-    // Reset gateway so init.ts has to resolve the new-install default from
-    // ai/defaults.ts. This is the actual production code path for a
-    // fresh install: bare `gbrain init --pglite` with a single ready key.
+  test('bare `init --pglite` with a single ready key: schema sized to the key-picked model (voyage-4/1024)', async () => {
+    // Reset gateway so init.ts has to resolve from env. This is the actual
+    // production code path for a fresh install: bare `gbrain init --pglite`
+    // with a single ready key. NOTE: this exercises the single-key auto-pick,
+    // NOT the new-install default — with only VOYAGE_API_KEY set, the only
+    // working provider wins (see the multi-key test below for the fork's
+    // NVIDIA new-install default).
     resetGateway();
 
     // Stub embed transport to return synthetic target-width vectors. The
@@ -118,17 +121,18 @@ describe('E2E: fresh gbrain init --pglite → import → embed works end-to-end'
 
     const allOut = stdoutBuf.join('\n');
 
-    // Init prints the resolved embedding choice (B.1).
-    expect(allOut).toContain(NEW_INSTALL_DEFAULT_EMBEDDING_MODEL);
-    expect(allOut).toContain(`(${NEW_INSTALL_DEFAULT_EMBEDDING_DIMENSIONS}d)`);
+    // Init prints the resolved embedding choice (B.1) — the single ready key
+    // (voyage) wins the auto-pick here.
+    expect(allOut).toContain('voyage:voyage-4');
+    expect(allOut).toContain('(1024d)');
 
     // config.json contains the saved resolved defaults (B.4 + CDX-3).
     const cfgPath = join(tmpHome, '.gbrain', 'config.json');
     expect(existsSync(cfgPath)).toBe(true);
     const cfg = JSON.parse(readFileSync(cfgPath, 'utf-8'));
     expect(cfg.engine).toBe('pglite');
-    expect(cfg.embedding_model).toBe(NEW_INSTALL_DEFAULT_EMBEDDING_MODEL);
-    expect(cfg.embedding_dimensions).toBe(NEW_INSTALL_DEFAULT_EMBEDDING_DIMENSIONS);
+    expect(cfg.embedding_model).toBe('voyage:voyage-4');
+    expect(cfg.embedding_dimensions).toBe(1024);
 
     // The actual schema column dim matches, and the voyage-picked install
     // wrote the explicit reranker override (v0.46.3 split-default: the bundle
@@ -153,6 +157,90 @@ describe('E2E: fresh gbrain init --pglite → import → embed works end-to-end'
         // reranker-off bundle; the point here is that no explicit row was written)
         expect(await engine.getConfig('search.reranker.enabled')).toBeNull();
       }
+    } finally {
+      await engine.disconnect();
+    }
+  }, 30000);
+
+  test('multi-key non-interactive init: fork default is NVIDIA (nvidia:nv-embed-v1/1024)', async () => {
+    // NVIDIA-only fork: when several embedding providers are env-ready and
+    // init runs non-interactively, the canonical new-install default
+    // (nvidia:nv-embed-v1 @ 1024d) wins — no doubled `nvidia:nvidia/` prefix
+    // in the persisted config.
+    process.env.NVIDIA_API_KEY = 'test-key-for-e2e';
+    resetGateway();
+    const synthVec = Array.from({ length: NEW_INSTALL_DEFAULT_EMBEDDING_DIMENSIONS }, () => 0.01);
+    __setEmbedTransportForTests(async (args: any) => ({
+      embeddings: args.values.map(() => synthVec),
+    }) as any);
+    const { runInit } = await import('../../src/commands/init.ts');
+    const origLog = console.log;
+    const origErr = console.error;
+    const outBuf: string[] = [];
+    const capture = (...args: unknown[]) => {
+      outBuf.push(args.map(a => typeof a === 'string' ? a : JSON.stringify(a)).join(' '));
+    };
+    console.log = capture;
+    console.error = capture;
+    try {
+      await runInit(['--pglite', '--non-interactive']);
+    } finally {
+      console.log = origLog;
+      console.error = origErr;
+    }
+    expect(outBuf.join('\n')).toContain('nvidia:nv-embed-v1');
+    const cfgPath = join(tmpHome, '.gbrain', 'config.json');
+    const cfg = JSON.parse(readFileSync(cfgPath, 'utf-8'));
+    expect(cfg.embedding_model).toBe('nvidia:nv-embed-v1');
+    expect(cfg.embedding_dimensions).toBe(1024);
+    expect(cfg.embedding_model).not.toContain('nvidia:nvidia/');
+  }, 30000);
+
+  test('NVIDIA-only fresh install: nvidia:nv-embed-v1/1024 + reranker explicitly disabled', async () => {
+    // NVIDIA-only fork: with ONLY NVIDIA_API_KEY set (no Voyage key), init
+    // persists the canonical embedding default WITHOUT the doubled
+    // `nvidia:nvidia/` prefix, and — since NVIDIA NIM has no rerank endpoint
+    // — writes `search.reranker.enabled=false` explicitly so the brain never
+    // silently inherits a reranker it has no key for.
+    resetGateway();
+    delete process.env.VOYAGE_API_KEY;
+    process.env.NVIDIA_API_KEY = 'nv-test-only';
+    const synthVec = Array.from({ length: NEW_INSTALL_DEFAULT_EMBEDDING_DIMENSIONS }, () => 0.01);
+    __setEmbedTransportForTests(async (args: any) => ({
+      embeddings: args.values.map(() => synthVec),
+    }) as any);
+    const origLog = console.log;
+    const origError = console.error;
+    const outBuf: string[] = [];
+    const capture = (...args: unknown[]) => {
+      outBuf.push(args.map(a => typeof a === 'string' ? a : JSON.stringify(a)).join(' '));
+    };
+    console.log = capture;
+    console.error = capture;
+    try {
+      const { runInit } = await import('../../src/commands/init.ts');
+      await runInit(['--pglite', '--non-interactive']);
+    } finally {
+      console.log = origLog;
+      console.error = origError;
+    }
+    expect(outBuf.join('\n')).toContain('nvidia:nv-embed-v1');
+    const cfgPath = join(tmpHome, '.gbrain', 'config.json');
+    const cfg = JSON.parse(readFileSync(cfgPath, 'utf-8'));
+    expect(cfg.embedding_model).toBe('nvidia:nv-embed-v1');
+    expect(cfg.embedding_model).not.toContain('nvidia:nvidia/');
+    expect(cfg.embedding_dimensions).toBe(1024);
+    const { PGLiteEngine } = await import('../../src/core/pglite-engine.ts');
+    const engine = new PGLiteEngine();
+    await engine.connect({ database_path: cfg.database_path, engine: 'pglite' });
+    try {
+      const { readContentChunksEmbeddingDim } = await import('../../src/core/embedding-dim-check.ts');
+      const colDim = await readContentChunksEmbeddingDim(engine);
+      expect(colDim.exists).toBe(true);
+      expect(colDim.dims).toBe(1024);
+      // NVIDIA-only: no reranker key available → explicit disable written.
+      expect(await engine.getConfig('search.reranker.model')).toBeNull();
+      expect(await engine.getConfig('search.reranker.enabled')).toBe('false');
     } finally {
       await engine.disconnect();
     }

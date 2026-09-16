@@ -25,6 +25,30 @@ describe('free local chat providers under a cost cap', () => {
     expect(() => t.reserve(est('llama-server:qwen3-32b'))).not.toThrow();
   });
 
+  test('OpenRouter :free chat routes reserve at zero cost', () => {
+    const t = new BudgetTracker({ maxCostUsd: 0.3, label: 'test' });
+    expect(() => t.reserve(est('openrouter:nvidia/nemotron-3-ultra-550b-a55b:free'))).not.toThrow();
+    expect(t.totalSpent).toBe(0);
+  });
+
+  test('malformed OpenRouter :free routes are not treated as zero-cost', () => {
+    for (const model of [
+      'openrouter:/x:free',
+      'openrouter:x/:free',
+      'openrouter:x:y:free',
+      'openrouter: x/y:free',
+      'openrouter:openrouter/free',
+      ' openrouter:nvidia/nemotron-3-ultra-550b-a55b:free ',
+    ]) {
+      const t = new BudgetTracker({ maxCostUsd: 0.3, label: 'test' });
+      expect(() => t.reserve(est(model))).toThrow(BudgetExhausted);
+    }
+  });
+  test('OpenRouter paid-looking routes remain subject to pricing checks', () => {
+    const t = new BudgetTracker({ maxCostUsd: 0.3, label: 'test' });
+    expect(() => t.reserve(est('openrouter:some-unknown-vendor/model'))).toThrow(BudgetExhausted);
+  });
+
   test('a genuinely unpriced remote provider still hard-fails (TX2 intact)', () => {
     const t = new BudgetTracker({ maxCostUsd: 0.3, label: 'test' });
     let err: unknown;

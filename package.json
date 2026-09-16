@@ -1,6 +1,6 @@
 {
-  "name": "gbrain",
-  "description": "Postgres-native personal knowledge brain with hybrid RAG search",
+  "name": "gbrain-nvidia",
+  "description": "gbrainNVIDIA — Postgres-native personal knowledge brain with hybrid RAG search, NVIDIA NIM models by default (fork of GBrain by Garry Tan)",
   "type": "module",
   "main": "src/core/index.ts",
   "bin": {

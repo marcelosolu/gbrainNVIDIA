@@ -59,9 +59,11 @@ describe('autopilot auto-drain wiring', () => {
   test('CODEX impl #4: no maxWaiting (it coalesces by name+queue, not source)', () => {
     // maxWaiting would return source A's waiting job for source B's submit,
     // never queuing B and over-counting the cap. The per-source idempotency key
-    // is the dedup; a pre-check on it avoids counting idempotency-hit re-submits.
+    // is the dedup; a pre-check on live/completed rows avoids counting
+    // idempotency-hit re-submits while dead/cancelled rows remain retryable.
     const drainBlock = SRC.slice(SRC.indexOf("'extract-atoms-drain'"));
     expect(drainBlock.slice(0, 900)).not.toContain('maxWaiting');
-    expect(SRC).toContain('WHERE idempotency_key = $1 LIMIT 1');
+    expect(SRC).toContain("WHERE idempotency_key = $1 ` +");
+    expect(SRC).toContain("AND status NOT IN ('dead', 'cancelled') LIMIT 1");
   });
 });
