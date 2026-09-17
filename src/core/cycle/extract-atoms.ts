@@ -1092,7 +1092,10 @@ export async function runPhaseExtractAtoms(
     // for the NVIDIA extraction route; keep every other model's behavior
     // unchanged. This is a per-call option, not a model/provider change.
     const extractProviderOptions = extractModel.startsWith('nvidia:')
-      ? { nvidia: { reasoningEffort: 'none' } }
+      // NVIDIA uses the OpenAI-compatible AI SDK adapter. Its provider option
+      // schema is keyed as `openai`, not by the recipe id (`nvidia`); using
+      // the latter silently drops reasoning_effort before the wire request.
+      ? { openai: { reasoningEffort: 'none' } }
       : undefined;
     try {
       const result = await chat({

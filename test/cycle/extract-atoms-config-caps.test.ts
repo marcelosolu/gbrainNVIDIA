@@ -88,7 +88,7 @@ describe('extract_atoms configurable caps (#4540)', () => {
     });
     expect(nvidia.calls).toHaveLength(1);
     expect(nvidia.calls[0].model).toBe('nvidia:nemotron-3-super-120b-a12b');
-    expect(nvidia.calls[0].providerOptions).toEqual({ nvidia: { reasoningEffort: 'none' } });
+    expect(nvidia.calls[0].providerOptions).toEqual({ openai: { reasoningEffort: 'none' } });
 
     await engine.setConfig('models.dream.extract_atoms', 'openai:gpt-5.4');
     const other = captureChat();
