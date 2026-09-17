@@ -62,9 +62,11 @@ export interface ResolveModelOpts {
  *  cause `resolveRecipe()` to throw "unknown provider" and the queue rejects
  *  the submit. */
 export const DEFAULT_ALIASES: Record<string, string> = {
-  opus:   'anthropic:claude-opus-4-7',
-  sonnet: 'anthropic:claude-sonnet-4-6',
-  haiku:  'anthropic:claude-haiku-4-5-20251001',
+  // NVIDIA-only fork (2026-09-08, decisão do operador): aliases clássicos
+  // apontam para modelos NVIDIA gratuitos — nunca Anthropic.
+  opus:   'nvidia:nemotron-3-ultra-550b-a55b',
+  sonnet: 'nvidia:nemotron-3-super-120b-a12b',
+  haiku:  'nvidia:nemotron-3-super-120b-a12b',
   // `gemini` repointed (#2507): `gemini-3-pro` only ever existed as a preview
   // id (`gemini-3-pro-preview`) and was shut down — it was never chat-listed
   // in the google recipe nor priced. 2.5-flash is the recipe's chat models[0];
@@ -89,10 +91,10 @@ export const DEFAULT_ALIASES: Record<string, string> = {
  * Users override via `gbrain config set models.tier.<tier> <model>`.
  */
 export const TIER_DEFAULTS: Record<ModelTier, string> = {
-  utility:   'anthropic:claude-haiku-4-5-20251001',
-  reasoning: 'anthropic:claude-sonnet-4-6',
-  deep:      'anthropic:claude-opus-4-7',
-  subagent:  'anthropic:claude-sonnet-4-6',
+  utility:   'nvidia:nemotron-3-super-120b-a12b',
+  reasoning: 'nvidia:nemotron-3-super-120b-a12b',
+  deep:      'nvidia:nemotron-3-ultra-550b-a55b',
+  subagent:  'nvidia:nemotron-3-super-120b-a12b',
 };
 
 /**
@@ -141,11 +143,14 @@ function discoveredOrStaticOpenAITier(tier: ModelTier): string {
 }
 
 export const PROVIDER_TIER_DEFAULTS: ReadonlyArray<{
-  provider: 'anthropic' | 'openai';
+  provider: 'nvidia' | 'openai';
   envKey: string;
   tiers: (tier: ModelTier) => string;
 }> = [
-  { provider: 'anthropic', envKey: 'ANTHROPIC_API_KEY', tiers: (tier) => TIER_DEFAULTS[tier] },
+  // NVIDIA-only fork (2026-09-08): NVIDIA na frente — chave presente resolve
+  // TODOS os tiers para modelos NVIDIA gratuitos. Anthropic removida da
+  // precedência: mesmo com ANTHROPIC_API_KEY no ambiente, nenhum tier cai nela.
+  { provider: 'nvidia', envKey: 'NVIDIA_API_KEY', tiers: (tier) => TIER_DEFAULTS[tier] },
   { provider: 'openai', envKey: 'OPENAI_API_KEY', tiers: discoveredOrStaticOpenAITier },
 ];
 

@@ -279,7 +279,10 @@ const submit_agent: Operation = {
     const { resolveModel, TIER_DEFAULTS, isAnthropicProvider, isOpenRouterSubagentFamily } = await import('../model-config.ts');
     const { isConfigTruthy } = await import('../config.ts');
     const resolvedModel = typeof p.model === 'string' ? p.model : await resolveModel(ctx.engine, { tier: 'subagent', configKey: 'models.subagent', fallback: TIER_DEFAULTS.subagent });
-    const modelForVerdict = splitProviderModelId(resolvedModel).provider === null && isAnthropicProvider(resolvedModel) ? normalizeModelId(resolvedModel) : resolvedModel;
+    // fork note: this guard runs ONLY when isAnthropicProvider matched, so the
+    // intended coercion target is anthropic — pass it explicitly because the
+    // no-arg default is 'nvidia' on this fork.
+    const modelForVerdict = splitProviderModelId(resolvedModel).provider === null && isAnthropicProvider(resolvedModel) ? normalizeModelId(resolvedModel, 'anthropic') : resolvedModel;
     if (['unknown', 'unusable:no_tools', 'unusable:no_subagent_loop'].includes(classifyCapabilities(modelForVerdict))) {
       throw new OperationError('invalid_params', 'model must name a supported agent tool-loop model');
     }
