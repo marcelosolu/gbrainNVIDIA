@@ -34,7 +34,7 @@ import { gbrainPath } from '../config.ts';
 import { ANTHROPIC_PRICING, type ModelPricing } from '../anthropic-pricing.ts';
 import { canonicalLookup } from '../model-pricing.ts';
 import { EMBEDDING_PRICING, lookupEmbeddingPrice } from '../embedding-pricing.ts';
-import { splitProviderModelId } from '../model-id.ts';
+import { splitProviderModelId, isStrictOpenRouterFreeModelId } from '../model-id.ts';
 import { resolveRecipe } from '../ai/model-resolver.ts';
 import { isoWeekFilename, resolveAuditDir } from '../audit-week-file.ts';
 
@@ -332,6 +332,11 @@ function lookupPricing(modelId: string, kind: BudgetKind): ModelPricing | null {
   if (modelTail) {
     const tailHit = ANTHROPIC_PRICING[modelTail];
     if (tailHit) return tailHit;
+  }
+  // OpenRouter's `:free` routes carry no token charge. They can still be
+  // capacity/rate limited, so zero pricing must not be confused with readiness.
+  if (kind === 'chat' && providerId === 'openrouter' && isStrictOpenRouterFreeModelId(modelId)) {
+    return { input: 0, output: 0 };
   }
   // Paid rerank providers (e.g. ZeroEntropy's zerank-2) aren't Claude-priced,
   // so they miss the ANTHROPIC_PRICING checks above. Reuse the embedding
