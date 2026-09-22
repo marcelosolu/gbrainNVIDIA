@@ -368,8 +368,8 @@ describe('resolveTierDefault — key-aware matrix (injected env used exclusively
     for (const id of Object.values(fallback)) expect(id.startsWith('openai:')).toBe(true);
   });
 
-  test('both keys → anthropic wins (first table entry; zero change for keyed installs)', () => {
-    const env = { ANTHROPIC_API_KEY: 'sk-ant-test', OPENAI_API_KEY: 'sk-test' };
+  test('both keys → nvidia wins (NVIDIA-only fork: NVIDIA is the first table entry)', () => {
+    const env = { ANTHROPIC_API_KEY: 'sk-ant-test', NVIDIA_API_KEY: 'nv-test', OPENAI_API_KEY: 'sk-test' };
     expect(resolveTierDefault('reasoning', env)).toBe(TIER_DEFAULTS.reasoning);
   });
 
@@ -384,8 +384,8 @@ describe('resolveTierDefault — key-aware matrix (injected env used exclusively
     expect(resolveTierDefault('reasoning', openaiOnly)).toBe(openaiStaticTierFallback().reasoning);
   });
 
-  test('table order is the precedence contract: anthropic first, openai second', () => {
-    expect(PROVIDER_TIER_DEFAULTS[0].provider).toBe('anthropic');
+  test('table order is the precedence contract: nvidia first, openai second (NVIDIA-only fork 2026-09-08)', () => {
+    expect(PROVIDER_TIER_DEFAULTS[0].provider).toBe('nvidia');
     expect(PROVIDER_TIER_DEFAULTS[1].provider).toBe('openai');
   });
 });
@@ -552,10 +552,13 @@ describe('resolveTierDefault — servable file-plane pin beats the Anthropic flo
     });
   });
 
-  test('ANTHROPIC_API_KEY present → key walk wins, the pin is ignored (keyed routing unchanged)', async () => {
+  test('ANTHROPIC_API_KEY alone does NOT route to anthropic (NVIDIA-only fork: anthropic dropped from precedence)', async () => {
     await withEnv({ ANTHROPIC_API_KEY: 'sk-ant-test', DEEPSEEK_API_KEY: 'sk-test' }, () => {
-      expect(resolveTierDefault('utility')).toBe(TIER_DEFAULTS.utility);
-      expect(resolveTierDefault('reasoning')).toBe(TIER_DEFAULTS.reasoning);
+      // env explícito (determinístico): sem NVIDIA_API_KEY/OPENAI_API_KEY → TIER_DEFAULTS, agora NVIDIA.
+      const env = { ANTHROPIC_API_KEY: 'sk-ant-test', DEEPSEEK_API_KEY: 'sk-test' };
+      expect(resolveTierDefault('utility', env)).toBe(TIER_DEFAULTS.utility);
+      expect(resolveTierDefault('reasoning', env)).toBe(TIER_DEFAULTS.reasoning);
+      expect(String(TIER_DEFAULTS.reasoning).startsWith('nvidia:')).toBe(true);
     });
   });
 

@@ -62,9 +62,7 @@ restart the shell or add the PATH export to the shell profile.
 
 ## Step 2: API Keys
 
-Skip API-key setup for the initial keyless memory path. If the user enables semantic retrieval or paid enrichment, configure the selected provider explicitly. GBrain defaults to the Voyage embedding + reranker stack
-(`voyage:voyage-4` @ 1024d + `voyage:rerank-2.5` — one key covers both); OpenAI is the
-main alternative, chosen at init via `--embedding-model <provider:model>`. ZeroEntropy
+Skip API-key setup for the initial keyless memory path. If the user enables semantic retrieval or enrichment, configure NVIDIA explicitly. gbrainNVIDIA defaults to NVIDIA NIM embeddings (`nvidia:nv-embed-v1` @ 1024d); reranking is optional and uses Voyage `voyage:rerank-2.5` only when explicitly configured with `VOYAGE_API_KEY`. OpenAI is an optional alternative, chosen at init via `--embedding-model <provider:model>`. ZeroEntropy
 is deprecated (its hosted API shuts down 2026-09-04): init auto-pick and the picker
 exclude it, and every ZE embed/rerank prints a deprecation warning. **Existing brain
 still on ZeroEntropy (or any need to switch embedding/reranker models later)?** Follow

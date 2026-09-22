@@ -13,20 +13,20 @@ If your CI / Docker pipeline can inject the API key as a build-time env var, set
 FROM oven/bun:1 AS builder
 
 # Inject key at build via --build-arg or `--env` from CI.
-ARG VOYAGE_API_KEY
-ENV VOYAGE_API_KEY=$VOYAGE_API_KEY
+ARG NVIDIA_API_KEY
+ENV NVIDIA_API_KEY=$NVIDIA_API_KEY
 
-RUN bun install -g github:garrytan/gbrain#latest-stable
-RUN gbrain init --pglite  # auto-picks the Voyage default (voyage-4 @ 1024d), persists config
+RUN bun install -g github:marcelosolu/gbrainNVIDIA#latest-stable
+RUN gbrain init --pglite  # auto-picks the NVIDIA default (nv-embed-v1 @ 1024d), persists config
 ```
 
 ```yaml
 # GitHub Actions equivalent
 - name: Initialize gbrain
   env:
-    VOYAGE_API_KEY: ${{ secrets.VOYAGE_API_KEY }}
+    NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
   run: |
-    bun install -g github:garrytan/gbrain#latest-stable
+    bun install -g github:marcelosolu/gbrainNVIDIA#latest-stable
     gbrain init --pglite
 ```
 
@@ -40,7 +40,7 @@ If the API key is a runtime secret (Kubernetes secret, runtime env injection, en
 
 ```dockerfile
 FROM oven/bun:1
-RUN bun install -g github:garrytan/gbrain#latest-stable
+RUN bun install -g github:marcelosolu/gbrainNVIDIA#latest-stable
 
 # Build the brain shape without a provider — schema lands at the default
 # width, but no embed callsite will actually run until runtime config.
@@ -54,7 +54,7 @@ ENTRYPOINT ["/bin/sh", "-c", "\
   && exec gbrain serve"]
 ```
 
-The `gbrain init --no-embedding` opt-in writes `embedding_disabled: true` to config. Every embed callsite (`gbrain import`, `gbrain embed`, the `runEmbedCore` library entry point) checks this and refuses cleanly with a re-init hint (`gbrain init --force --embedding-model voyage:voyage-4`) rather than proceeding with a silent default. (`gbrain config set embedding_model` is refused by design — it's a file-plane schema-sizing field the DB-plane command can't affect.)
+The `gbrain init --no-embedding` opt-in writes `embedding_disabled: true` to config. Every embed callsite (`gbrain import`, `gbrain embed`, the `runEmbedCore` library entry point) checks this and refuses cleanly with a re-init hint (`gbrain init --force --embedding-model nvidia:nv-embed-v1`) rather than proceeding with a silent default. (`gbrain config set embedding_model` is refused by design — it's a file-plane schema-sizing field the DB-plane command can't affect.)
 
 The runtime `gbrain init --force` re-runs the init flow against the now-populated env, which:
 
@@ -68,7 +68,7 @@ The runtime `gbrain init --force` re-runs the init flow against the now-populate
 
 ```dockerfile
 FROM oven/bun:1
-RUN bun install -g github:garrytan/gbrain#latest-stable
+RUN bun install -g github:marcelosolu/gbrainNVIDIA#latest-stable
 RUN gbrain init --pglite --no-embedding   # keyless install — done; no runtime re-init needed
 ```
 

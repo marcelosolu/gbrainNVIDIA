@@ -188,6 +188,16 @@ export const CANONICAL_PRICING: Record<string, ModelPricing> = {
   'openrouter:deepseek/deepseek-v4-flash-0731': { input: 0.14,  output: 0.28 },
   'openrouter:qwen/qwen3.7-flash':              { input: 0.03,  output: 0.13 },
   'openrouter:qwen/qwen3.6-plus':               { input: 0.325, output: 1.95 },
+
+  // ── NVIDIA (fork 100% NVIDIA, 2026-09-08) ────────────────────────────
+  // Endpoint integrate.api.nvidia.com bills ~$0 on dev credits, so the honest
+  // budget figure is zero (same treatment as OpenRouter :free routes in
+  // budget-tracker.ts). Fabricating a "conservative" nonzero rate would
+  // over-report spend and trip --max-usd caps early. Entries are still
+  // required: DEFAULT_ALIASES / TIER_DEFAULTS point at these ids and the
+  // default-alias-liveness test fails on unpriced defaults.
+  'nvidia:nemotron-3-super-120b-a12b': { input: 0, output: 0 },
+  'nvidia:nemotron-3-ultra-550b-a55b': { input: 0, output: 0 },
 };
 
 /**

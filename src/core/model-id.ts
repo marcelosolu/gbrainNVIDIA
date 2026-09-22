@@ -72,23 +72,55 @@ export function splitProviderModelId(input: string | null | undefined): SplitPro
  *
  * Behavior (built on `splitProviderModelId`, so it inherits colon-first precedence):
  *   - `anthropic/claude-sonnet-4-6`        → `anthropic:claude-sonnet-4-6`  (slash → colon)
- *   - `claude-sonnet-4-6`                  → `anthropic:claude-sonnet-4-6`  (bare → default)
+ *   - `nemotron-3-super-120b-a12b`         → `nvidia:nemotron-3-super-120b-a12b`  (bare → default)
+ *     FORK (gbrainNVIDIA): the default provider is 'nvidia', NOT anthropic. An
+ *     unprefixed model id must never silently route to the paid Anthropic
+ *     provider this fork removes. Call sites that pass an explicit second
+ *     argument (e.g. normalizeModelId(x, 'openai')) are unaffected.
  *   - `anthropic:claude-sonnet-4-6`        → unchanged                      (colon identity)
  *   - `openrouter:anthropic/claude-4.6`    → unchanged   (nested: inner slash preserved)
  *   - ''/'   ' (empty/whitespace)          → returned as-is (downstream throws loudly)
  *   - `:claude-sonnet-4-6` / `/claude-...` → returned as-is (malformed leading separator —
  *                                            empty-string provider; downstream throws loudly)
  */
-export function normalizeModelId(input: string, defaultProvider = 'anthropic'): string {
+
+export function normalizeModelId(input: string, defaultProvider = 'nvidia'): string {
   const { provider, model } = splitProviderModelId(input);
   // Return unchanged (so resolveRecipe throws loudly — #1698) when:
   //   - empty/whitespace input (`model === ''`), or
   //   - a malformed leading separator (`:foo` / `/foo`) — splitProviderModelId yields an
   //     EMPTY-STRING provider for those. Without this guard the `provider ?` truthiness
   //     below treats `''` as "no provider" and silently coerces the model to the default
-  //     (e.g. `:claude-sonnet-4-6` → `anthropic:claude-sonnet-4-6`), masking a typo as a
+  //     (e.g. `:claude-sonnet-4-7` → `anthropic:claude-sonnet-4-7`), masking a typo as a
   //     valid Anthropic model. A `null` provider (bare name like `claude-opus-4-7`) still
   //     defaults — that's the intended path.
   if (!model || provider === '') return input;
   return provider ? `${provider}:${model}` : `${defaultProvider}:${model}`;
+}
+
+/**
+ * Strict grammar for an OpenRouter free chat route used by the budget gate
+ * and doctor. It intentionally rejects aliases, empty segments, whitespace,
+ * extra colons, and malformed provider/model identifiers.
+ */
+export function isStrictOpenRouterFreeModelId(input: string): boolean {
+  return /^openrouter:[a-z0-9][a-z0-9._-]{0,63}\/[a-z0-9][a-z0-9._-]{0,127}:free$/i.test(input);
+}
+
+/**
+ * Serialize a provider + model id to canonical `provider:model` config form.
+ *
+ * Recipes store catalog-form model ids (`nvidia/nv-embed-v1`), so naive
+ * `${providerId}:${modelId}` concatenation produces the doubled
+ * `nvidia:nvidia/nv-embed-v1`. The doubled form parses (colon-first) but
+ * breaks exact-match comparisons against canonical defaults and looks
+ * malformed in user-facing config. Strip the redundant provider prefix.
+ *
+ *   serializeModelId('nvidia', 'nvidia/nv-embed-v1') → 'nvidia:nv-embed-v1'
+ *   serializeModelId('voyage', 'voyage-4')           → 'voyage:voyage-4'
+ */
+export function serializeModelId(providerId: string, modelId: string): string {
+  const prefix = `${providerId}/`;
+  const suffix = modelId.startsWith(prefix) ? modelId.slice(prefix.length) : modelId;
+  return `${providerId}:${suffix}`;
 }
