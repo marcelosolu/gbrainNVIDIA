@@ -403,6 +403,11 @@ describe('MinionQueue: #1737 per-handler default timeout', () => {
     expect(job.timeout_ms).toBe(10 * 60 * 1000);
   });
 
+  test('conversation-facts backfill gets the 10-min LLM default', async () => {
+    const job = await queue.add('extract-conversation-facts', { sourceId: 'default' });
+    expect(job.timeout_ms).toBe(10 * 60 * 1000);
+  });
+
   test('contextual per-chunk reindex gets the 60-min default', async () => {
     const job = await queue.add('contextual_reindex_per_chunk', { page_slug: 'large-transcript' }, undefined, {
       allowProtectedSubmit: true,
