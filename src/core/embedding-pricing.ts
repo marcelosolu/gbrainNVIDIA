@@ -91,6 +91,15 @@ export const EMBEDDING_PRICING: Record<string, EmbeddingPricing> = {
   // $6.50 audio, $12.00 video). Same convention as voyage-multimodal-3 above:
   // the TEXT rate is the row, pixel/audio token pricing is out of scope here.
   'google:gemini-embedding-2':     { pricePerMTok: 0.20 },
+  // gbrainNVIDIA fork: the hosted NVIDIA embedding route bills $0 on the
+  // developer-credit plan (same basis as the chat rows in model-pricing.ts,
+  // verified against live usage 2026-09-08). Without these rows an embed-kind
+  // budget reserve under any --max-cost cap hard-fails no_pricing on the
+  // fork's default embedding model. Key note: config ids like
+  // 'nvidia:nvidia/nemotron-3-embed-1b' re-key through lookupEmbeddingPrice's
+  // nested-slash retry to 'nvidia:nemotron-3-embed-1b'.
+  'nvidia:nv-embed-v1':               { pricePerMTok: 0 },
+  'nvidia:nemotron-3-embed-1b':       { pricePerMTok: 0 },
 };
 
 export type PriceLookupResult =

@@ -18,6 +18,7 @@ import { OperationError } from './ops/contract.ts';
 import { PGVECTOR_HNSW_VECTOR_MAX_DIMS, hnswMaxDimsForType } from './vector-index.ts';
 import { gbrainPath } from './config.ts';
 import { resolveRecipe } from './ai/model-resolver.ts';
+import { serializeModelId } from './model-id.ts';
 import type { Recipe } from './ai/types.ts';
 import { AIConfigError } from './ai/errors.ts';
 import {
@@ -421,7 +422,10 @@ function validateDimAgainstTouchpoint(
   return {
     ok: true,
     dim,
-    model: `${recipe.id}:${modelId}`,
+    // Fork 2026-09-08: serializeModelId, not naive `${recipe.id}:${modelId}` —
+    // alias resolution can return catalog form (`nvidia/nv-embed-v1`), and the
+    // naive join writes the doubled `nvidia:nvidia/nv-embed-v1` into configs.
+    model: serializeModelId(recipe.id, modelId),
     provider: recipe.id,
     recipeDefault: effectiveDefaultDims,
   };

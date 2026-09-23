@@ -12,6 +12,7 @@ import { probeOllama, probeLMStudio } from '../core/ai/probes.ts';
 import { loadConfig } from '../core/config.ts';
 import { AIConfigError, AITransientError } from '../core/ai/errors.ts';
 import { lookupEmbeddingPrice } from '../core/embedding-pricing.ts';
+import { serializeModelId } from '../core/model-id.ts';
 import { renderCanonicalMigrationCommands } from '../core/ai/defaults.ts';
 import type { Recipe } from '../core/ai/types.ts';
 
@@ -388,9 +389,9 @@ async function runExplain(args: string[]): Promise<void> {
       // Price the CANONICAL model, not the recipe-wide touchpoint hint — the
       // touchpoint cost tracks models[0], which can differ from the canonical
       // pick (voyage-4 is $0.06/M; the recipe-wide hint reflects the flagship).
-      const modelPrice = lookupEmbeddingPrice(`${r.id}:${canonicalModel}`);
+      const modelPrice = lookupEmbeddingPrice(serializeModelId(r.id, canonicalModel));
       options.push({
-        id: `${r.id}:${canonicalModel}`,
+        id: serializeModelId(r.id, canonicalModel),
         touchpoint: 'embedding',
         model: canonicalModel,
         dims: m.default_dims,
@@ -416,7 +417,7 @@ async function runExplain(args: string[]): Promise<void> {
     if (r.touchpoints.expansion) {
       const m = r.touchpoints.expansion;
       options.push({
-        id: `${r.id}:${m.models[0]}`,
+        id: serializeModelId(r.id, m.models[0]),
         touchpoint: 'expansion',
         model: m.models[0],
         cost_per_1m_tokens_usd: m.cost_per_1m_tokens_usd,
@@ -430,7 +431,7 @@ async function runExplain(args: string[]): Promise<void> {
     if (r.touchpoints.chat && r.touchpoints.chat.models.length > 0) {
       const m = r.touchpoints.chat;
       options.push({
-        id: `${r.id}:${m.models[0]}`,
+        id: serializeModelId(r.id, m.models[0]),
         touchpoint: 'chat',
         model: m.models[0],
         cost_per_1m_input_usd: m.cost_per_1m_input_usd,

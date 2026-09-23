@@ -60,6 +60,7 @@ boundary and add its link here rather than raising the cap.
 | [Agent Bootstrap (continued)](key-files/agent-bootstrap-continued.md) | Remaining cross-file entries |
 | [Google connector + open-loop engine (key files cluster)](key-files/google-and-loops.md) | Cross-file subsystem contract |
 | [Google And Loops (continued)](key-files/google-and-loops-continued.md) | Remaining cross-file entries |
+| [HermCTO operations — extract_atoms route](../operations/extract-atoms-route-fix.md) | Local NVIDIA extractor routing contract |
 
 ## BrainBench — in a sibling repo
 

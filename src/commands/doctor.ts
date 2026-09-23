@@ -116,7 +116,7 @@ export {
   checkCyclePhaseScope,
 } from './doctor/checks/routing-federation.ts';
 export {
-  checkChatFallbackChainInert,
+  checkChatFallbackChain,
   checkSearchMode,
   checkEvalDrift,
   checkEmbeddingEnvOverride,
@@ -205,7 +205,7 @@ import {
   checkCyclePhaseScope,
 } from './doctor/checks/routing-federation.ts';
 import {
-  checkChatFallbackChainInert,
+  checkChatFallbackChain,
   checkSearchMode,
   checkEvalDrift,
   checkEmbeddingEnvOverride,
@@ -4034,8 +4034,8 @@ export async function buildChecks(
   // v0.32.3 search-lite — mode + eval_drift surfaces. Status stays 'ok' per
   // [CDX-20]; hint lives in `message`.
   if (engine !== null) {
-    progress.heartbeat('chat_fallback_chain_inert');
-    const inertFallbackChain = await checkChatFallbackChainInert(engine);
+    progress.heartbeat('chat_fallback_chain');
+    const inertFallbackChain = await checkChatFallbackChain(engine);
     if (inertFallbackChain) checks.push(inertFallbackChain);
     progress.heartbeat('search_mode');
     checks.push(await checkSearchMode(engine));

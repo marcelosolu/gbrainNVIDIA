@@ -26,25 +26,22 @@
 export const DEFAULT_EMBEDDING_MODEL = 'zeroentropyai:zembed-1';
 export const DEFAULT_EMBEDDING_DIMENSIONS = 1280;
 
-// NEW-INSTALL DEFAULT (v0.46.3): voyage-4 @ 1024d.
+// NEW-INSTALL DEFAULT (fork 100% NVIDIA, 2026-09-08): nvidia:nv-embed-v1 @ 1024d.
 //
-// Why Voyage: ZeroEntropy covered BOTH gbrain touchpoints (embedding +
-// reranking); Voyage is the only replacement that covers both on one key
-// (rerank-2.5 rides VOYAGE_API_KEY; OpenAI has no reranker API), the
-// multimodal model is already voyage:voyage-multimodal-3, and the voyage-4
-// family is the current hosted retrieval SOTA. Why voyage-4 (not -large/-lite):
-// $0.06/M ≈ zembed-1's $0.05/M, and the v4 trio SHARES ONE EMBEDDING SPACE —
-// a brain indexed with voyage-4 can later point its query model at
-// voyage-4-large or -lite with no reindex, so the within-family choice is
-// reversible. 1024 is a valid Voyage Matryoshka step {256, 512, 1024, 2048}
-// and matches the embedding_image/embedding_multimodal widths.
+// Why NVIDIA: this fork routes every tier to NVIDIA NIM and keeps no Anthropic
+// fallback, so fresh installs must not default to a dead or foreign provider.
+// nv-embed-v1 is the general-purpose NVIDIA embedding model (the QA/e5 model
+// has a 512-token input cap; the code model is niche) and 1024 is both its
+// native width and under pgvector's 2000-dimension HNSW cap (2048/4096 force
+// exact scans). Voyage stays available as an explicit opt-in, and remains the
+// reranker home (voyage:rerank-2.5) since NVIDIA NIM has no rerank endpoint.
 //
 // Consumers (new-install surfaces ONLY): init auto-pick canonical tiebreak,
 // the interactive picker default, the no-keys hint, keyless fresh-install
 // schema sizing (passed as an explicit init param — the schema generators keep
 // importing the legacy constants for existing-brain reconnects), and all
 // recommendation copy (playbook, banners, doctor fix-hints, advisor).
-export const NEW_INSTALL_DEFAULT_EMBEDDING_MODEL = 'voyage:voyage-4';
+export const NEW_INSTALL_DEFAULT_EMBEDDING_MODEL = 'nvidia:nv-embed-v1';
 export const NEW_INSTALL_DEFAULT_EMBEDDING_DIMENSIONS = 1024;
 
 /**
