@@ -1,6 +1,6 @@
-# GBrain
+# gbrainNVIDIA
 
-**Give the agent you already use a memory you control.** GBrain stores explicit facts with their sources, supports corrections and withdrawal, and makes the same memory available across your agents. Start with keyless memory and keyword retrieval; add semantic search, synthesis, and background enrichment when you need them.
+**gbrainNVIDIA é um fork do [GBrain](https://github.com/garrytan/gbrain), adaptado para usar modelos NVIDIA por padrão.** O embedding novo usa `nvidia:nv-embed-v1`; as rotas de chat usam NVIDIA; nenhum fallback Anthropic é usado pelo fork.
 
 **Keep skills beside knowledge.** New local brains include memory skills in their
 content root. Agents can join an authorized catalog; only approved editors can
@@ -94,7 +94,7 @@ before restarting services with this version.
 > package with no connection to this project. Do not run `npm install -g gbrain` or
 > `bun add -g gbrain` — you'll get something else, and it can shadow the real binary on
 > your PATH. Install and upgrade ONLY via the documented paths below
-> (`bun install -g github:garrytan/gbrain`, or `git clone` + `bun install && bun link`).
+> (`bun install -g github:marcelosolu/gbrainNVIDIA`, or `git clone` + `bun install && bun link`).
 > If you already ran the npm install by mistake: `npm uninstall -g gbrain` /
 > `bun remove -g gbrain`, then reinstall from GitHub. `gbrain doctor` detects a
 > shadowing npm install and prints the fix.
@@ -103,7 +103,7 @@ Start with the agent you already use. For Grok Bot and Muse, the dedicated guide
 
 ```text
 Add GBrain memory to this existing agent. Read and follow:
-https://raw.githubusercontent.com/garrytan/gbrain/master/INSTALL_FOR_AGENTS.md
+https://raw.githubusercontent.com/marcelosolu/gbrainNVIDIA/master/INSTALL_FOR_AGENTS.md
 Keep my current identity and instructions. Start keyless, preserve unrelated
 configuration, and use the memory-only path. Do not create a personal-agent
 identity or private repository. Show me the required search-mode choice.
@@ -121,7 +121,7 @@ Turn Codex into your persistent personal agent. (Just want the brain + skills wi
 
 ```
 Read and follow every step of:
-https://raw.githubusercontent.com/garrytan/gbrain/latest-stable/BOOTSTRAP_FOR_AGENTS.md
+https://raw.githubusercontent.com/marcelosolu/gbrainNVIDIA/latest-stable/BOOTSTRAP_FOR_AGENTS.md
 Goal: set yourself up as my persistent personal agent in this folder, with gbrain
 as your memory. Interview me before writing any identity file — never invent
 answers. Ask before anything destructive. You are not done until
@@ -140,7 +140,7 @@ Works in the **desktop app** and in the **CLI** (`claude` in a terminal) — ide
 
 ```
 Read and follow every step of:
-https://raw.githubusercontent.com/garrytan/gbrain/latest-stable/BOOTSTRAP_FOR_AGENTS.md
+https://raw.githubusercontent.com/marcelosolu/gbrainNVIDIA/latest-stable/BOOTSTRAP_FOR_AGENTS.md
 Goal: set yourself up as my persistent personal agent in this folder, with gbrain
 as your memory. Interview me before writing any identity file — never invent
 answers. Ask before anything destructive. You are not done until
@@ -163,7 +163,7 @@ Then paste this into your agent:
 
 ```
 Retrieve and follow the instructions at:
-https://raw.githubusercontent.com/garrytan/gbrain/master/INSTALL_FOR_AGENTS.md
+https://raw.githubusercontent.com/marcelosolu/gbrainNVIDIA/master/INSTALL_FOR_AGENTS.md
 ```
 
 The agent starts with keyless memory and verifies it. API keys, automatic capture, paid enrichment, and the dream cycle are separate opt-in choices; the install prompt does not authorize all of them.
@@ -197,8 +197,8 @@ Onboarding a whole agent harness onto a shared brain? On the brain host, `gbrain
 ### CLI standalone (no agent)
 
 ```bash
-bun install -g github:garrytan/gbrain
-gbrain init --pglite --no-embedding  # keyless; no server, no Docker
+bun install -g github:marcelosolu/gbrainNVIDIA
+ gbrain init --pglite     # 2 seconds; no server, no Docker
 gbrain doctor            # verify health
 gbrain import ~/notes/ --no-embed   # index your markdown
 gbrain search "a phrase from a note" --json
@@ -221,8 +221,8 @@ Follow the [upgrade recovery guide](skills/migrations/v0.48.3.0.md) for rebuild
 commands, embedding costs, and the restrictions that remain after rebuilding.
 **Say to your agent:** *"Upgrade gbrain and check whether my search index needs rebuilding."*
 
-- **[Claude Code](docs/mcp/CLAUDE_CODE.md)** — plugin: `/plugin marketplace add garrytan/gbrain` + `/plugin install gbrain@gbrain` (MCP + skills; persona variants `gbrain-coding` / `gbrain-daily` install curated subsets — pick exactly one gbrain plugin). Marketplace-free skills: `gbrain skillpack scaffold --harness claude-code` copies a persona-curated skill set into your user-scope skills dir with a local-edit-respecting update lens. Or local one-liner: `claude mcp add gbrain -- gbrain serve` (zero server, zero tunnel). Remote with just a bearer token: `gbrain connect https://your-host/mcp --token gbrain_xxx` prints a paste-ready block (or `--install` wires it up and smoke-tests the token).
-- **[Codex](docs/mcp/CODEX.md)** — plugin (recommended): `codex plugin marketplace add garrytan/gbrain@codex-plugin` + `codex plugin add gbrain@gbrain` installs the MCP server AND the curated skill set. Or connect-only: `gbrain connect https://your-host/mcp --token gbrain_xxx --agent codex` (or `--install`); That legacy path reads `$GBRAIN_REMOTE_TOKEN` at runtime. The new private-handoff installer writes a private managed HTTP header so the connection survives a new shell.
+- **[Claude Code](docs/mcp/CLAUDE_CODE.md)** — plugin: `/plugin marketplace add marcelosolu/gbrainNVIDIA` + `/plugin install gbrain@gbrain` (MCP + skills; persona variants `gbrain-coding` / `gbrain-daily` install curated subsets — pick exactly one gbrain plugin). Marketplace-free skills: `gbrain skillpack scaffold --harness claude-code` copies a persona-curated skill set into your user-scope skills dir with a local-edit-respecting update lens. Or local one-liner: `claude mcp add gbrain -- gbrain serve` (zero server, zero tunnel). Remote with just a bearer token: `gbrain connect https://your-host/mcp --token gbrain_xxx` prints a paste-ready block (or `--install` wires it up and smoke-tests the token).
+- **[Codex](docs/mcp/CODEX.md)** — plugin (recommended): `codex plugin marketplace add marcelosolu/gbrainNVIDIA@codex-plugin` + `codex plugin add gbrain@gbrain` installs the MCP server AND the curated skill set. Or connect-only: `gbrain connect https://your-host/mcp --token gbrain_xxx --agent codex` (or `--install`); Codex reads the bearer from `$GBRAIN_REMOTE_TOKEN` at runtime, so the token never lands in Codex config.
 - **[Cursor / Windsurf / any stdio MCP client](docs/mcp/CLAUDE_CODE.md)** — same shape, add `{"command": "gbrain", "args": ["serve"]}` to your MCP config.
 - **[Hermes](docs/mcp/HERMES.md)** — `printf 'Y\n' | hermes mcp add gbrain --env GBRAIN_HOME=$HOME --connect-timeout 60 --command $(which gbrain) --args serve`. Keep `--args` last, and verify with `hermes mcp test gbrain` (the add exits 0 even on failure).
 - **[Grok Bot](docs/guides/grok-bot.md)** — recommended: keep the brain on your computer, publish it with `gbrain mcp expose --funnel`, grant the Bot a `memory-writer` client and install the thin CLI at `/workspace/gbrain`; or install memory inside the Bot computer when no machine of yours stays online. Bots share local files and credentials; sources organize memory without isolating Bots. **Say to your agent:** *"connect grok bot to my brain"*.

@@ -32,12 +32,16 @@ describe('recipe: nvidia', () => {
     expect(() => defaultResolveAuth(nvidia, {}, 'chat')).toThrow(AIConfigError);
   });
 
-  test('chat touchpoint declares Nemotron 3 Super without subagent-loop claims', () => {
+  test('chat touchpoint declares Nemotron 3 chat with validated tool-loop claims (fork)', () => {
+    // NVIDIA-only fork (2026-09-08): supports_tools / supports_subagent_loop
+    // flipped to true (Ultra validated in production) and context raised to
+    // the 1M-token Nemotron 3 catalog figure.
     const chat = nvidia.touchpoints.chat!;
     expect(chat.models).toContain('nvidia/nemotron-3-super-120b-a12b');
-    expect(chat.supports_tools).toBe(false);
-    expect(chat.supports_subagent_loop).toBe(false);
-    expect(chat.max_context_tokens).toBe(128000);
+    expect(chat.models).toContain('nvidia/nemotron-3-ultra-550b-a55b');
+    expect(chat.supports_tools).toBe(true);
+    expect(chat.supports_subagent_loop).toBe(true);
+    expect(chat.max_context_tokens).toBe(1000000);
   });
 
   test('embedding touchpoint declares tested NVIDIA models and natural dimensions', () => {
@@ -49,6 +53,10 @@ describe('recipe: nvidia', () => {
     expect(e.default_dims).toBe(1024);
     expect(e.dims_options).toEqual([1024, 2048, 4096]);
     expect(e.max_batch_tokens).toBeGreaterThan(0);
+    // Fork: the shorthand `--embedding-model nvidia` must resolve to the
+    // general-purpose model, not models[0] (the QA/e5 model has a 512-token
+    // input cap).
+    expect(e.default_model).toBe('nvidia/nv-embed-v1');
   });
 
   test('aliases allow short model names while preserving NVIDIA catalog ids', () => {

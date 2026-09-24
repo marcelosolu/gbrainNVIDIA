@@ -73,10 +73,42 @@ describe('extract_atoms prompt — content-free transcript rule', () => {
     // The rule must survive a bracketed preamble too: a model that echoes a
     // `[Source: …]` citation before obeying still yields an honest `[]`.
     expect(parseAtomsOutcome('[Source: x] nothing here.\n[]')).toEqual({ ok: true, atoms: [] });
-    // Positive control: the prose the rule prevents IS a failure.
-    expect(parseAtomsOutcome('This page has no extractable ideas.')).toEqual({
+    // A model may still violate the output-only instruction while expressing
+    // the same honest zero-yield decision in a deterministic sentence. The
+    // parser should recover this narrow class, not count it as malformed.
+    expect(parseAtomsOutcome('This page has no extractable ideas.')).toEqual({ ok: true, atoms: [] });
+    expect(parseAtomsOutcome('No extractable atoms were found; nothing to extract.')).toEqual({ ok: true, atoms: [] });
+    // Positive control: generic prose and refusals remain failures.
+    expect(parseAtomsOutcome('I cannot help with this request.')).toEqual({
       ok: false,
       reason: 'no JSON array in response',
     });
+  });
+});
+
+describe('parseAtomsOutcome — adversarial fixtures for the zero-yield recovery', () => {
+  // The recovery must fire ONLY on the narrow, explicit no-result vocabulary.
+  // These fixtures pin that a page carrying real extractable content, or one
+  // whose prose merely contains a blocklist phrase, is never silently treated
+  // as an honest empty result (gbrainNVIDIA review 2026-09-15, item 3).
+  test('a full atom-bearing sentence is NOT recovered as zero-yield', () => {
+    const r = parseAtomsOutcome('The team shipped the migration and p95 dropped 420ms to 90ms.');
+    expect(r.ok).toBe(false);
+  });
+  test('prose that merely mentions extraction but is generic stays a failure', () => {
+    // "no extractable" must be followed by an idea/atom noun to count; a bare
+    // dangling phrase or an unrelated sentence is not the honest zero-yield set.
+    expect(parseAtomsOutcome('There is extractable value in the notes below').ok).toBe(false);
+  });
+  test('a refusal containing a blocklist word is not recovered', () => {
+    expect(parseAtomsOutcome('I cannot do that.').ok).toBe(false);
+  });
+  test('recovery stays gated even when the trigger phrase sits inside longer prose', () => {
+    // >300 chars must not recover (guard caps runaway/adversarial input).
+    const long = 'no extractable ideas. '.repeat(20) + 'x'.repeat(320);
+    expect(parseAtomsOutcome(long).ok).toBe(false);
+  });
+  test('recovery rejects text containing braces (looks like truncated JSON, not honest zero)', () => {
+    expect(parseAtomsOutcome('nothing to extract {}').ok).toBe(false);
   });
 });

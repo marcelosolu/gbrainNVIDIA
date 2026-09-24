@@ -19,6 +19,7 @@ import type { BrainEngine } from '../engine.ts';
 import type { RemediationStep } from '../remediation-step.ts';
 import { makeRemediationStep } from '../remediation-step.ts';
 import { QUARANTINE_FILTER_FRAGMENT } from '../quarantine.ts';
+import { EMBED_SKIP_FILTER_FRAGMENT } from '../embed-skip.ts';
 
 /** Shared shape returned by all four checks. */
 export interface OnboardCheckResult {
@@ -128,7 +129,11 @@ export async function checkEmbedStaleness(
 ): Promise<OnboardCheckResult> {
   const staleCount = await safeCount(
     engine,
-    `SELECT COUNT(*) AS count FROM content_chunks WHERE embedding IS NULL`,
+    `SELECT COUNT(*) AS count
+       FROM content_chunks cc
+       JOIN pages p ON p.id = cc.page_id
+      WHERE cc.embedding IS NULL
+        AND ${EMBED_SKIP_FILTER_FRAGMENT}`,
   );
   const remediations: RemediationStep[] = [];
   let status: 'ok' | 'warn' | 'fail' = 'ok';

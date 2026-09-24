@@ -25,8 +25,8 @@ Markdown export is not a full database backup.
 Already running [OpenClaw](https://github.com/garrytan/openclaw) or [Hermes](https://github.com/garrytan/hermes)?
 
 ```bash
-bun install -g github:garrytan/gbrain#latest-stable
-gbrain init --pglite --no-embedding   # keyless; no server
+bun install -g github:marcelosolu/gbrainNVIDIA#latest-stable
+ gbrain init --pglite                  # 2 seconds; no server
 gbrain skillpack scaffold --all       # scaffolds every bundled skill (skills/manifest.json) into your agent workspace
 gbrain doctor                         # inspect diagnostics and expected empty-brain warnings
 ```
@@ -64,11 +64,11 @@ See the [agent upgrade steps](../INSTALL_FOR_AGENTS.md#upgrade).
 No agent platform, just shell + MCP-aware editor.
 
 ```bash
-bun install -g github:garrytan/gbrain#latest-stable
-gbrain init --pglite --no-embedding
+bun install -g github:marcelosolu/gbrainNVIDIA#latest-stable
+ gbrain init --pglite
 ```
 
-> **If `bun install -g` hits a postinstall error** (Bun blocks postinstall hooks in some environments), the CLI prints a recovery hint pointing at [#218](https://github.com/garrytan/gbrain/issues/218). Run `gbrain doctor` to diagnose, then `gbrain apply-migrations --yes --no-autopilot-install` manually. The deterministic fallback is `git clone https://github.com/garrytan/gbrain.git ~/gbrain && cd ~/gbrain && GBRAIN_NO_AUTOPILOT_INSTALL=1 bun install && bun link`.
+> **If `bun install -g` hits a postinstall error** (Bun blocks postinstall hooks in some environments), the CLI prints a recovery hint pointing at [#218](https://github.com/garrytan/gbrain/issues/218). Run `gbrain doctor` to diagnose, then `gbrain apply-migrations --yes` manually. The deterministic fallback is `git clone https://github.com/marcelosolu/gbrainNVIDIA.git ~/gbrainNVIDIA && cd ~/gbrainNVIDIA && bun install && bun link`.
 
 The init flow detects your repo size and suggests Supabase for brains > 1000 markdown files. Agent-harness installs that want Postgres first can run the ladder instead:
 
