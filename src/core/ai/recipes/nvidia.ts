@@ -37,6 +37,10 @@ export const nvidia: Recipe = {
     'nv-embedqa-e5-v5': 'nvidia/nv-embedqa-e5-v5',
     'llama-nemotron-embed-1b-v2': 'nvidia/llama-nemotron-embed-1b-v2',
     'nemotron-3-embed-8b': 'nvidia/nemotron-3-embed-8b',
+    // gbrainNVIDIA fork — hosted Nemotron-3.5 embedder (2048 native, honours
+    // the `dimensions` request param natively; verified 2026-09-29).
+    'nemotron-3.5-embed-1b': 'nvidia/nemotron-3.5-embed-1b',
+    'nemotron-3.5-embed-8b': 'nvidia/nemotron-3.5-embed-8b',
     'nemotron-3-super': 'nvidia/nemotron-3-super-120b-a12b',
     'nemotron-3-super-120b-a12b': 'nvidia/nemotron-3-super-120b-a12b',
     'nv-embed-v1': 'nvidia/nv-embed-v1',
@@ -50,8 +54,13 @@ export const nvidia: Recipe = {
     chat: {
       models: [
         'nvidia/nemotron-3-super-120b-a12b',
+        // gbrainNVIDIA fork — models actually hosted + verified with real
+        // tool-calling calls against integrate.api.nvidia.com (2026-09-29).
+        'nvidia/nemotron-3-ultra-550b-a55b',
+        'nvidia/nemotron-3.5-lightning-30b-a3b',
+        'nvidia/nemotron-3.5-super-vl-120b-a12b',
       ],
-      supports_tools: false,
+      supports_tools: true,
       supports_subagent_loop: false,
       // Do not treat Nemotron as a Minions subagent driver until tool-calling
       // and replay stability are proven through a separate adapter test.
@@ -63,6 +72,10 @@ export const nvidia: Recipe = {
         'nvidia/nv-embedqa-e5-v5',
         'nvidia/llama-nemotron-embed-1b-v2',
         'nvidia/nemotron-3-embed-8b',
+        // gbrainNVIDIA fork — Nemotron-3.5 embedders honour `dimensions`
+        // natively (1b: 2048, 8b: 4096), so no matryoshka prefix is needed.
+        'nvidia/nemotron-3.5-embed-1b',
+        'nvidia/nemotron-3.5-embed-8b',
         'nvidia/nv-embed-v1',
         'nvidia/nv-embedcode-7b-v1',
       ],
@@ -72,6 +85,11 @@ export const nvidia: Recipe = {
       matryoshka: {
         'nvidia/nemotron-3-embed-8b': { native: 4096, prefixes: [1024, 2048] },
         'nvidia/nemotron-3-embed-8b-bf16': { native: 4096, prefixes: [1024, 2048] },
+        // gbrainNVIDIA fork — Nemotron-3.5 embedders answer their native width
+        // whatever `dimensions` asks (same behaviour as embed-8b), so the
+        // gateway truncates + L2-normalizes the prefix instead.
+        'nvidia/nemotron-3.5-embed-1b': { native: 2048, prefixes: [1024] },
+        'nvidia/nemotron-3.5-embed-8b': { native: 4096, prefixes: [1024, 2048] },
       },
       // Default to the lightest tested hosted model. Larger NVIDIA models are
       // supported via explicit embedding_dimensions (2048 or 4096).
