@@ -1793,11 +1793,21 @@ async function embedSubBatch(
   opts?: EmbedOpts,
 ): Promise<{ embeddings: Float32Array[]; reportedTokens: number | null }> {
   try {
+    // gbrainNVIDIA fork — the hosted Nemotron-3.5 embedder runs an
+    // injection heuristic that false-positives on the literal label "Data:"
+    // (any case, colon attached): "Data: x" -> 422 "input rejected by content
+    // safety screening", while "Data - x" and "Data : x" embed fine. Portuguese
+    // notes carry "Data: 2026-…" lines everywhere, which silently excluded
+    // ~68% of this brain's chunks. Neutralise the label ONLY in the text sent
+    // to the provider; stored page text is untouched.
+    const providerTexts = recipe.id === 'nvidia'
+      ? texts.map((t) => t.replace(/([Dd][Aa][Tt][Aa]):/g, '$1 -'))
+      : texts;
     const maxRetries = hasAIInvocationGuard() ? 0 : opts?.maxRetries ?? __budgetStore.getStore()?.providerRetries; // PR 4 (Wave B incremental derivation, transcripts): an embed in a metered page step makes only the attempts it reserved for
     const callTransport = () => invokeAI({ operation: 'gateway.embed', kind: 'embedding', model: `${recipe.id}:${modelId}`,
       maxInputTokens: embedRequestMaxInputTokens(texts, recipe, modelId), maxOutputTokens: 0, estimatedInputTokens: Math.ceil(texts.reduce((n, text) => n + text.length, 0) / (recipe.touchpoints.embedding?.chars_per_token ?? DEFAULT_CHARS_PER_TOKEN)) }, () => _embedTransport({
       model,
-      values: texts,
+      values: providerTexts,
       providerOptions: providerOpts,
       // v0.42.20.0 — default a per-SUB-BATCH embed timeout (codex #3: bounding
       // once at embed() top would cap a whole multi-batch import; this is the
