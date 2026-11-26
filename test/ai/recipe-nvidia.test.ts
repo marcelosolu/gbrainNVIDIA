@@ -35,7 +35,11 @@ describe('recipe: nvidia', () => {
   test('chat touchpoint declares Nemotron 3 Super without subagent-loop claims', () => {
     const chat = nvidia.touchpoints.chat!;
     expect(chat.models).toContain('nvidia/nemotron-3-super-120b-a12b');
-    expect(chat.supports_tools).toBe(false);
+    // gbrainNVIDIA fork — hosted Nemotron 3/3.5 chat models tool-call for real
+    // against integrate.api.nvidia.com (verified with live calls 2026-09-29),
+    // so the fork declares supports_tools: true. The Minions subagent loop
+    // stays unsupported until replay stability is proven separately.
+    expect(chat.supports_tools).toBe(true);
     expect(chat.supports_subagent_loop).toBe(false);
     expect(chat.max_context_tokens).toBe(128000);
   });
