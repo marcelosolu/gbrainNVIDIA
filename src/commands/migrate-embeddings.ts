@@ -296,6 +296,13 @@ export async function probeTargetProvider(
   } catch (e) {
     // #6587: the invocation guard refuses dispatch once the migration lost its lease; that is not a provider
     // fault, so say so (provider error text stays private).
+    if (process.env.GBRAIN_MIGRATE_DEBUG === '1') {
+      try {
+        const fs = await import('node:fs');
+        const msg = e instanceof Error ? `MSG=${e.message}\nCAUSE=${(e as any).cause?.message ?? ''}\nSTACK=${e.stack}` : String(e);
+        fs.appendFileSync('/var/lib/gbrain/.gbrain/migrate-probe-error.log', `[${new Date().toISOString()}] ${toModel} ${toDims}d\n${msg}\n\n`);
+      } catch { /* instrumentation must never change control flow */ }
+    }
     if (e instanceof Error && /lease lost/i.test(e.message)) {
       return {
         ok: false,

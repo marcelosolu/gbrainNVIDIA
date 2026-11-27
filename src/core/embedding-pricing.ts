@@ -37,6 +37,11 @@ export const EMBEDDING_PRICING: Record<string, EmbeddingPricing> = {
   // OpenAI (https://developers.openai.com/api/docs/pricing, verified 2026-07-28)
   'openai:text-embedding-3-large': { pricePerMTok: 0.13 },
   'openai:text-embedding-3-small': { pricePerMTok: 0.02 },
+  // gbrainNVIDIA fork — NVIDIA hosted embeddings are free (policy US$0).
+  'nvidia:nvidia/nemotron-3.5-embed-1b': { pricePerMTok: 0 },
+  'nvidia:nvidia/nemotron-3.5-embed-8b': { pricePerMTok: 0 },
+  'nvidia:nvidia/nemotron-3-embed-8b': { pricePerMTok: 0 },
+  'nvidia:nvidia/nemotron-3-embed-1b': { pricePerMTok: 0 },
   // Legacy OpenAI ada (still common in older brains)
   'openai:text-embedding-ada-002': { pricePerMTok: 0.10 },
   // Voyage (https://docs.voyageai.com/docs/pricing, verified 2026-08-21)

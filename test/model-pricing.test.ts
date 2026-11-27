@@ -26,11 +26,19 @@ import { estimateAnthropicCost } from '../src/core/brain-score-recommendations.t
 
 describe('CANONICAL_PRICING — table integrity', () => {
   test('every entry has finite positive rates and a provider-prefixed key', () => {
+    // gbrainNVIDIA fork — NVIDIA hosted models bill US$0 by policy on this
+    // install; they are the only legitimate zero-rate rows.
+    const FREE_BY_POLICY = /^nvidia:/;
     for (const [key, p] of Object.entries(CANONICAL_PRICING)) {
       expect(Number.isFinite(p.input)).toBe(true);
       expect(Number.isFinite(p.output)).toBe(true);
-      expect(p.input).toBeGreaterThan(0);
-      expect(p.output).toBeGreaterThan(0);
+      if (FREE_BY_POLICY.test(key)) {
+        expect(p.input).toBe(0);
+        expect(p.output).toBe(0);
+      } else {
+        expect(p.input).toBeGreaterThan(0);
+        expect(p.output).toBeGreaterThan(0);
+      }
       // Provider-prefixed key (sanity guard against a bare key sneaking in).
       // NOTE: deliberately NO output>=input invariant — symmetric pricing is
       // legitimate (e.g. together:...Llama-3.3 is 0.88/0.88).
