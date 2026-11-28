@@ -158,9 +158,13 @@ describe('classifyCapabilities (D6 — three-tier capability verdict)', () => {
   });
 
   it('keeps unusable:no_tools precedence when tool calling is missing too', () => {
-    // nvidia declares BOTH supports_tools: false and supports_subagent_loop:
-    // false — the stronger no_tools verdict wins.
-    expect(classifyCapabilities('nvidia:nvidia/nemotron-3-super-120b-a12b')).toBe('unusable:no_tools');
+    // nvidia used to declare BOTH supports_tools: false and
+    // supports_subagent_loop: false (stronger no_tools verdict won). The
+    // gbrainNVIDIA fork now declares supports_tools: true because hosted
+    // Nemotron chat models tool-call for real (live-verified 2026-09-29), so
+    // the verdict for NVIDIA is no_subagent_loop, not no_tools. The no_tools
+    // precedence path itself is still covered by the Ollama case below.
+    expect(classifyCapabilities('nvidia:nvidia/nemotron-3-super-120b-a12b')).toBe('unusable:no_subagent_loop');
   });
 
   it('returns unusable:no_tools for Ollama subagent loops', () => {

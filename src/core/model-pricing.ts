@@ -146,6 +146,15 @@ export const ANTHROPIC_CACHE_READ_MULT_OVERRIDES: Record<string, number> = {
  * keep aliases in lockstep; the drift guard asserts they agree.
  */
 export const CANONICAL_PRICING: Record<string, ModelPricing> = {
+  // ── NVIDIA (gbrainNVIDIA fork) ────────────────────────────────────────
+  // NVIDIA hosted models are free on this install — policy US$0, same as the
+  // fork's embedding rows. Kept here so chat budgets price them instead of
+  // refusing with "no pricing entry".
+  'nvidia:nvidia/nemotron-3-ultra-550b-a55b':        { input: 0, output: 0 },
+  'nvidia:nvidia/nemotron-3.5-lightning-30b-a3b':    { input: 0, output: 0 },
+  'nvidia:nvidia/nemotron-3.5-super-vl-120b-a12b':   { input: 0, output: 0 },
+  'nvidia:nvidia/nemotron-3-nano-omni-30b-a3b-reasoning': { input: 0, output: 0 },
+  'nvidia:nvidia/nemotron-3.5-bolt-e4b':             { input: 0, output: 0 },
   // ── Anthropic ──────────────────────────────────────────────────────────
   // All Anthropic rows carry derived cache_read/cache_write fields (#4218);
   // see the anthro() helper + multiplier constants above.

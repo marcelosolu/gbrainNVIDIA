@@ -11,7 +11,7 @@ For the link-only index, see `llms.txt`. Source of truth: https://github.com/gar
 
 ## AGENTS.md
 
-Source: https://raw.githubusercontent.com/garrytan/gbrain/master/AGENTS.md
+Source: https://raw.githubusercontent.com/marcelosolu/gbrainNVIDIA/main/AGENTS.md
 
 # Agents working on GBrain
 
@@ -408,7 +408,7 @@ publishing: `LLMS_REPO_BASE=https://raw.githubusercontent.com/your-org/your-fork
 
 ## CLAUDE.md
 
-Source: https://raw.githubusercontent.com/garrytan/gbrain/master/CLAUDE.md
+Source: https://raw.githubusercontent.com/marcelosolu/gbrainNVIDIA/main/CLAUDE.md
 
 # CLAUDE.md
 
@@ -931,7 +931,7 @@ installation is not proof of native use. Read
 
 ## INSTALL_FOR_AGENTS.md
 
-Source: https://raw.githubusercontent.com/garrytan/gbrain/master/INSTALL_FOR_AGENTS.md
+Source: https://raw.githubusercontent.com/marcelosolu/gbrainNVIDIA/main/INSTALL_FOR_AGENTS.md
 
 # GBrain Installation Guide for AI Agents
 
@@ -1917,7 +1917,7 @@ TTY-only (`GBRAIN_BANNER=1` forces it, `GBRAIN_NO_BANNER=1` hides it).
 
 ## docs/STABILITY.md
 
-Source: https://raw.githubusercontent.com/garrytan/gbrain/master/docs/STABILITY.md
+Source: https://raw.githubusercontent.com/marcelosolu/gbrainNVIDIA/main/docs/STABILITY.md
 
 # Stability: which gbrain you get and how it changes
 
@@ -2050,7 +2050,7 @@ Every release is also published on the **alpha** channel, as a GitHub pre-releas
 
 ## docs/protocol/AGENT_OPERATOR_v1.md
 
-Source: https://raw.githubusercontent.com/garrytan/gbrain/master/docs/protocol/AGENT_OPERATOR_v1.md
+Source: https://raw.githubusercontent.com/marcelosolu/gbrainNVIDIA/main/docs/protocol/AGENT_OPERATOR_v1.md
 
 # AGENT_OPERATOR v1: how an agent operates gbrain
 
@@ -3451,7 +3451,7 @@ the decision table above and compare. Docs URLs are stored as
 
 ## skills/RESOLVER.md
 
-Source: https://raw.githubusercontent.com/garrytan/gbrain/master/skills/RESOLVER.md
+Source: https://raw.githubusercontent.com/marcelosolu/gbrainNVIDIA/main/skills/RESOLVER.md
 
 # GBrain Skill Resolver
 
@@ -3684,7 +3684,7 @@ These apply to ALL brain-writing skills:
 
 ## README.md
 
-Source: https://raw.githubusercontent.com/garrytan/gbrain/master/README.md
+Source: https://raw.githubusercontent.com/marcelosolu/gbrainNVIDIA/main/README.md
 
 <h1><picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/brand/gbrain-wordmark-light.svg"><img src="docs/images/brand/gbrain-wordmark.svg" alt="GBrain" height="52"></picture></h1>
 
@@ -4133,7 +4133,7 @@ Community PR contributors are credited in `CHANGELOG.md` per release. Attributio
 
 ## docs/ENGINES.md
 
-Source: https://raw.githubusercontent.com/garrytan/gbrain/master/docs/ENGINES.md
+Source: https://raw.githubusercontent.com/marcelosolu/gbrainNVIDIA/main/docs/ENGINES.md
 
 # Pluggable Engine Architecture
 
@@ -6437,7 +6437,7 @@ PGLite speaks Postgres SQL, so no FTS5/sqlite-vss dialect is needed.
 
 ## docs/guides/cron-schedule.md
 
-Source: https://raw.githubusercontent.com/garrytan/gbrain/master/docs/guides/cron-schedule.md
+Source: https://raw.githubusercontent.com/marcelosolu/gbrainNVIDIA/main/docs/guides/cron-schedule.md
 
 # Reference Cron Schedule
 
@@ -7012,7 +7012,7 @@ already queued.
 
 ## docs/guides/troubleshooting.md
 
-Source: https://raw.githubusercontent.com/garrytan/gbrain/master/docs/guides/troubleshooting.md
+Source: https://raw.githubusercontent.com/marcelosolu/gbrainNVIDIA/main/docs/guides/troubleshooting.md
 
 # Troubleshooting
 
